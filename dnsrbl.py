@@ -29,9 +29,9 @@ optional.add_argument("--time_window", default=10, help="Time window, in minutes
                       choices=(10, 15, 30, 60), type=int, env_var='TIME_WINDOW')
 optional.add_argument("--retention", default=10, help='Flush bans after, in days, integer, default: 10',
                       type=int, env_var='RETENTION')
+optional.add_argument("--pdns_api_url", help='PowerDNS API URL: http://fqdn:8081/api/v1', env_var='PDNS_API_URL')
 optional.add_argument("--dry_run", default=False, action='store_true', help='Just print, do not change',
                       env_var='DRY_RUN')
-optional.add_argument("--pdns_api_url", help='PowerDNS API URL: http://fqdn:8081/api/v1', env_var='PDNS_API_URL')
 required.add_argument("--pdns_api_key", help='PowerDNS API KEY', required=True, env_var='PDNS_API_KEY')
 required.add_argument("--pdns_rbl_zone", default='hostinger.rbl.', help='RBL zone, default: hostinger.rbl',
                       required=True, env_var='PDNS_RBL_ZONE')
