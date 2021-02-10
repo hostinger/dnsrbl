@@ -1,0 +1,5 @@
+elasticsearch==7.10.1
+elasticsearch-dsl==7.3.0
+mysql-connector==2.2.9
+python-powerdns==0.2.1
+ConfigArgParse==1.2.3
