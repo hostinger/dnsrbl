@@ -35,6 +35,8 @@ optional arguments:
                         Flush bans after, in days, integer, default: 10 [env var: RETENTION]
   --pdns_api_url PDNS_API_URL
                         PowerDNS API URL: http://fqdn:8081/api/v1 [env var: PDNS_API_URL]
+  --manual_remove MANUAL_REMOVE [MANUAL_REMOVE ...]
+                        list of IPS to remove from rbl [env var: MANUAL_REMOVE]
   --dry_run             Just print, do not change [env var: DRY_RUN]
 
 ```
