@@ -7,39 +7,42 @@ import mysql.connector
 import ipaddress
 
 
-parser = configargparse.ArgParser(add_help=False, description='This script will fetch data from ElasticSearch '
-                                                              'and BAN IP addresses in hostinger DNSRBL.')
-required = parser.add_argument_group('required arguments')
-optional = parser.add_argument_group('optional arguments')
-'''Suppressing default help'''
-optional.add_argument('-h', '--help', action='help', default=configargparse.SUPPRESS,
-                      help='show this help message and exit')
-required.add_argument('--es_user', help='Elastic http auth username', required=True, env_var='ES_USER')
-required.add_argument("--es_pass", help='Elastic http auth password', required=True, env_var='ES_PASS')
-required.add_argument("--es_url", help='ElasticSearch url', env_var='ES_URL', required=True)
-required.add_argument("--es_index", help='Index name, default: openresty-*', env_var='ES_INDEX', required=True)
-optional.add_argument("--es_scheme", default='https', help='Transport, default: https',
-                      choices=('https', 'http'), env_var='ES_SCHEME')
-optional.add_argument("--es_timeout", default=15, help='ES read timeout, default: 15', type=int, env_var='ES_SCHEME')
-optional.add_argument("--es_port", default=443, help='80 or 443, default: 443', type=int, env_var='ES_PORT')
-optional.add_argument("--ban_threshold", default=1000,
-                      help='Count to get banned, integer, default: 1000', type=int, env_var='BAN_THRESHOLD')
+def parse_args():
+    parser = configargparse.ArgParser(add_help=False, description='This script will fetch data from ElasticSearch '
+                                                                  'and BAN IP addresses in hostinger DNSRBL.')
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+    '''Suppressing default help'''
+    optional.add_argument('-h', '--help', action='help', default=configargparse.SUPPRESS,
+                          help='show this help message and exit')
+    required.add_argument('--es_user', help='Elastic http auth username', required=True, env_var='ES_USER')
+    required.add_argument("--es_pass", help='Elastic http auth password', required=True, env_var='ES_PASS')
+    required.add_argument("--es_url", help='ElasticSearch url', env_var='ES_URL', required=True)
+    required.add_argument("--es_index", help='Index name, default: openresty-*', env_var='ES_INDEX', required=True)
+    optional.add_argument("--es_scheme", default='https', help='Transport, default: https',
+                          choices=('https', 'http'), env_var='ES_SCHEME')
+    optional.add_argument("--es_timeout", default=15, help='ES read timeout, default: 15', type=int, env_var='ES_SCHEME')
+    optional.add_argument("--es_port", default=443, help='80 or 443, default: 443', type=int, env_var='ES_PORT')
+    optional.add_argument("--ban_threshold", default=1000,
+                          help='Count to get banned, integer, default: 1000', type=int, env_var='BAN_THRESHOLD')
 
-optional.add_argument("--time_window", default=10, help="Time window, in minutes",
-                      choices=(10, 15, 30, 60), type=int, env_var='TIME_WINDOW')
-optional.add_argument("--retention", default=10, help='Flush bans after, in days, integer, default: 10',
-                      type=int, env_var='RETENTION')
-optional.add_argument("--pdns_api_url", help='PowerDNS API URL: http://fqdn:8081/api/v1', env_var='PDNS_API_URL')
-optional.add_argument("--dry_run", default=False, action='store_true', help='Just print, do not change',
-                      env_var='DRY_RUN')
-required.add_argument("--pdns_api_key", help='PowerDNS API KEY', required=True, env_var='PDNS_API_KEY')
-required.add_argument("--pdns_rbl_zone", default='hostinger.rbl.', help='RBL zone, default: hostinger.rbl',
-                      required=True, env_var='PDNS_RBL_ZONE')
-required.add_argument("--mysql_host", help='Mysql DB host/ip', required=True, env_var='MYSQL_HOST')
-required.add_argument("--mysql_pass", help='Mysql password', required=True, env_var='MYSQL_PASS')
-required.add_argument("--mysql_user", help='Mysql user', required=True, env_var='MYSQL_USER')
-required.add_argument("--mysql_db", help='Mysql database', required=True, env_var='MYSQL_DB')
-args = parser.parse_args()
+    optional.add_argument("--time_window", default=10, help="Time window, in minutes",
+                          choices=(10, 15, 30, 60), type=int, env_var='TIME_WINDOW')
+    optional.add_argument("--retention", default=10, help='Flush bans after, in days, integer, default: 10',
+                          type=int, env_var='RETENTION')
+    optional.add_argument("--pdns_api_url", help='PowerDNS API URL: http://fqdn:8081/api/v1', env_var='PDNS_API_URL')
+    optional.add_argument("--manual_remove", help='list of IPS to remove from rbl',
+                          env_var='MANUAL_REMOVE', nargs='+')
+    optional.add_argument("--dry_run", default=False, action='store_true', help='Just print, do not change',
+                          env_var='DRY_RUN')
+    required.add_argument("--pdns_api_key", help='PowerDNS API KEY', required=True, env_var='PDNS_API_KEY')
+    required.add_argument("--pdns_rbl_zone", default='hostinger.rbl.', help='RBL zone, default: hostinger.rbl',
+                          required=True, env_var='PDNS_RBL_ZONE')
+    required.add_argument("--mysql_host", help='Mysql DB host/ip', required=True, env_var='MYSQL_HOST')
+    required.add_argument("--mysql_pass", help='Mysql password', required=True, env_var='MYSQL_PASS')
+    required.add_argument("--mysql_user", help='Mysql user', required=True, env_var='MYSQL_USER')
+    required.add_argument("--mysql_db", help='Mysql database', required=True, env_var='MYSQL_DB')
+    return parser.parse_args()
 
 
 class Es:
@@ -111,7 +114,7 @@ class PowerDnsClient:
     def __create_pdns_zone(self):
         print('Creating PowerDNS zone {}'.format(args.pdns_rbl_zone))
         serial = datetime.date.today().strftime("%Y%m%d00")
-        soa = "ns1.hostinger.rbl. hostinger.rbl. %s 28800 7200 604800 86400" % serial
+        soa = "ns1.%s %s %s 28800 7200 604800 86400" % (self.pdns_zone_name, self.pdns_zone_name, serial)
         soa_r = powerdns.RRSet(name='hostinger.rbl.',
                                rtype="SOA",
                                records=[(soa, False)],
@@ -124,18 +127,19 @@ class PowerDnsClient:
         return zone
 
     def create_pdns_rrsets(self, iplist):
-        print('Creating new ban records')
+        print('Create new ban records for: ', *iplist, sep='\n')
         for ip in iplist:
             self.zone.create_records([
                 powerdns.RRSet(self.reverse(ip[0]), 'A', ['127.0.0.1'])
             ])
 
     def remove_pdns_rrsets(self, iplist):
-        print('Removing expired ban records')
+        print('Remove ban records from PowerDNS if any {}'.format(iplist))
         for ip in iplist:
             self.zone.delete_record([
                 powerdns.RRSet(self.reverse(ip[0]), 'A', ['127.0.0.1'])
             ])
+            print('Sent removal query for {}'.format(self.reverse(ip[0]) + '.' + args.pdns_rbl_zone))
 
     @staticmethod
     def reverse(ip):
@@ -169,49 +173,76 @@ class MysqlDB:
         cursor.executemany("REPLACE INTO hostinger_dnsrbl (IP,CREATED_AT,COMMENT) VALUES (%s,%s,%s)", values)
         self.db.commit()
 
+    def remove_manually(self, iplist):
+        cursor = self.db.cursor()
+        cursor.executemany("DELETE FROM hostinger_dnsrbl WHERE ip= %s", iplist)
+        self.db.commit()
+
     def remove_expired_bans(self, days_to_keep):
         cursor = self.db.cursor()
         cursor.execute("SELECT IP FROM hostinger_dnsrbl WHERE CREATED_AT <= NOW() - INTERVAL %s DAY", (days_to_keep,))
-        ips = cursor.fetchall()
-        pdns.remove_pdns_rrsets(ips)
+        ips = list(cursor.fetchall())
+        print('Cleanup from DB if any: {}'.format(ips))
         cursor.execute("DELETE FROM hostinger_dnsrbl WHERE CREATED_AT <= NOW() - INTERVAL %s DAY",
                        (days_to_keep,))
         self.db.commit()
+        return ips
 
     def __timestamp_now(self):
         self.ts_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         return self.ts_now
 
 
-elastic = Es()
-'''
-Separated query object for future, to be able to generate different objects,
-if same structure is needed, it should be fine using same object just passing different "lookup=" variable.
-'''
-query_obj = elastic.construct_query(lookup='POST /xmlrpc.php.*')
-response = elastic.execute_search(query_obj)
+def main():
+    pdns = PowerDnsClient()
+    db = MysqlDB()
+    if args.manual_remove:
+        cleanup(pdns_obj=pdns, db_obj=db, manual_remove=args.manual_remove)
+    else:
+        elastic = Es()
+        '''
+        Separated query object for future, to be able to generate different objects,
+        if same structure is needed, it should be fine using same object just passing different "lookup=" variable.
+        '''
+        query_obj = elastic.construct_query(lookup='POST /xmlrpc.php.*')
+        response = elastic.execute_search(query_obj)
+        badlist = []
 
-pdns = PowerDnsClient()
-db = MysqlDB()
-badlist = []
+        for bucket in response.aggregations.ips.buckets:
+            try:
+                ipaddress.IPv4Address(bucket['key'])
+            except ValueError:
+                continue
+            if (bucket['doc_count'] > args.ban_threshold
+                    and ipaddress.IPv4Address(bucket['key']).is_global
+                    and bucket.hosts['value'] > 10):
+                reason = 'Above threshold xmlrpc hits: {0} ' \
+                         'Unique webs: {1} ' \
+                         'Time window: {2} minutes'.format(bucket['doc_count'], bucket.hosts['value'], args.time_window)
+                badlist.append((bucket['key'], reason))
 
-for bucket in response.aggregations.ips.buckets:
-    try:
-        ipaddress.IPv4Address(bucket['key'])
-    except ValueError:
-        continue
-    if (bucket['doc_count'] > args.ban_threshold
-            and ipaddress.IPv4Address(bucket['key']).is_global
-            and bucket.hosts['value'] > 10):
-        reason = 'Above threshold xmlrpc hits: {0} ' \
-                 'Unique webs: {1} ' \
-                 'Time window: {2} minutes'.format(bucket['doc_count'], bucket.hosts['value'], args.time_window)
-        badlist.append((bucket['key'], reason))
+        if args.dry_run:
+            print('would ban: ', *badlist, sep='\n')
+        else:
+            pdns.create_pdns_rrsets(badlist)
+            db.create_db_records(badlist)
+            cleanup(args.retention, pdns, db)
 
 
-if args.dry_run:
-    print('would ban: ', *badlist, sep='\n')
-else:
-    pdns.create_pdns_rrsets(badlist)
-    db.create_db_records(badlist)
-    db.remove_expired_bans(args.retention)
+def cleanup(retention=None, pdns_obj=None, db_obj=None, manual_remove=None):
+    if not pdns_obj or not db_obj:
+        pdns_obj = PowerDnsClient()
+        db_obj = MysqlDB()
+    if manual_remove:
+        iplist = []
+        [iplist.append((i,)) for i in manual_remove]
+        db_obj.remove_manually(iplist)
+        pdns_obj.remove_pdns_rrsets(iplist)
+    else:
+        ips = db_obj.remove_expired_bans(retention)
+        pdns_obj.remove_pdns_rrsets(ips)
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    main()
