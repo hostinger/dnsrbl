@@ -33,6 +33,8 @@ def parse_args():
     optional.add_argument("--pdns_api_url", help='PowerDNS API URL: http://fqdn:8081/api/v1', env_var='PDNS_API_URL')
     optional.add_argument("--manual_remove", help='list of IPS to remove from rbl',
                           env_var='MANUAL_REMOVE', nargs='+')
+    optional.add_argument("--list_banned", default=False, action='store_true', help='list of banned IPS from rbl',
+                          env_var='LIST_BANNED')
     optional.add_argument("--dry_run", default=False, action='store_true', help='Just print, do not change',
                           env_var='DRY_RUN')
     required.add_argument("--pdns_api_key", help='PowerDNS API KEY', required=True, env_var='PDNS_API_KEY')
@@ -141,6 +143,9 @@ class PowerDnsClient:
             ])
             print('Sent removal query for {}'.format(self.reverse(ip[0]) + '.' + args.pdns_rbl_zone))
 
+    def get_pdns_rrsets(self):
+        return self.zone.records
+
     @staticmethod
     def reverse(ip):
         if len(ip) <= 1:
@@ -197,7 +202,15 @@ def main():
     pdns = PowerDnsClient()
     db = MysqlDB()
     if args.manual_remove:
-        cleanup(pdns_obj=pdns, db_obj=db, manual_remove=args.manual_remove)
+        if args.dry_run:
+            print('Would remove {} from rbl'.format(args.manual_remove))
+        else:
+            cleanup(pdns_obj=pdns, db_obj=db, manual_remove=args.manual_remove)
+    if args.list_banned:
+        bans = pdns.get_pdns_rrsets()
+        for rrset in bans:
+            if rrset['type'] == 'A':
+                print(rrset.get('name'))
     else:
         elastic = Es()
         '''
