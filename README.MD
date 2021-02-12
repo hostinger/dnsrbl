@@ -37,6 +37,7 @@ optional arguments:
                         PowerDNS API URL: http://fqdn:8081/api/v1 [env var: PDNS_API_URL]
   --manual_remove MANUAL_REMOVE [MANUAL_REMOVE ...]
                         list of IPS to remove from rbl [env var: MANUAL_REMOVE]
+  --list_banned         list of banned IPS from rbl [env var: LIST_BANNED]
   --dry_run             Just print, do not change [env var: DRY_RUN]
 
 ```
