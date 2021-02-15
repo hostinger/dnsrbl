@@ -48,7 +48,7 @@ def parse_args():
 
 
 class Es:
-    def __init__(self):
+    def __init__(self, args):
         self.hosts = args.es_url
         self.http_auth = (args.es_user, args.es_pass)
         self.port = args.es_port
@@ -96,7 +96,7 @@ class Es:
 
 class PowerDnsClient:
 
-    def __init__(self):
+    def __init__(self, args):
         self.pdns_api_key = args.pdns_api_key
         self.pdns_api_url = args.pdns_api_url
         self.pdns_zone_name = args.pdns_rbl_zone
@@ -114,7 +114,7 @@ class PowerDnsClient:
         return api
 
     def __create_pdns_zone(self):
-        print('Creating PowerDNS zone {}'.format(args.pdns_rbl_zone))
+        print('Creating PowerDNS zone {}'.format(self.pdns_zone_name))
         serial = datetime.date.today().strftime("%Y%m%d00")
         soa = "ns1.%s %s %s 28800 7200 604800 86400" % (self.pdns_zone_name, self.pdns_zone_name, serial)
         soa_r = powerdns.RRSet(name='hostinger.rbl.',
@@ -141,7 +141,7 @@ class PowerDnsClient:
             self.zone.delete_record([
                 powerdns.RRSet(self.reverse(ip[0]), 'A', ['127.0.0.1'])
             ])
-            print('Sent removal query for {}'.format(self.reverse(ip[0]) + '.' + args.pdns_rbl_zone))
+            print('Sent removal query for {}'.format(self.reverse(ip[0]) + '.' + self.pdns_zone_name))
 
     def get_pdns_rrsets(self):
         return self.zone.records
@@ -154,7 +154,7 @@ class PowerDnsClient:
 
 
 class MysqlDB:
-    def __init__(self):
+    def __init__(self, args):
         self.host = args.mysql_host
         self.user = args.mysql_user
         self.password = args.mysql_pass
@@ -199,20 +199,23 @@ class MysqlDB:
 
 
 def main():
-    pdns = PowerDnsClient()
-    db = MysqlDB()
+    args = parse_args()
+    pdns = PowerDnsClient(args)
+    db = MysqlDB(args)
     if args.manual_remove:
         if args.dry_run:
             print('Would remove {} from rbl'.format(args.manual_remove))
+            exit(0)
         else:
             cleanup(pdns_obj=pdns, db_obj=db, manual_remove=args.manual_remove)
+            exit(0)
     if args.list_banned:
         bans = pdns.get_pdns_rrsets()
         for rrset in bans:
             if rrset['type'] == 'A':
                 print(rrset.get('name'))
     else:
-        elastic = Es()
+        elastic = Es(args)
         '''
         Separated query object for future, to be able to generate different objects,
         if same structure is needed, it should be fine using same object just passing different "lookup=" variable.
@@ -243,9 +246,10 @@ def main():
 
 
 def cleanup(retention=None, pdns_obj=None, db_obj=None, manual_remove=None):
+    args = parse_args()
     if not pdns_obj or not db_obj:
-        pdns_obj = PowerDnsClient()
-        db_obj = MysqlDB()
+        pdns_obj = PowerDnsClient(args)
+        db_obj = MysqlDB(args)
     if manual_remove:
         iplist = []
         [iplist.append((i,)) for i in manual_remove]
@@ -257,5 +261,4 @@ def cleanup(retention=None, pdns_obj=None, db_obj=None, manual_remove=None):
 
 
 if __name__ == "__main__":
-    args = parse_args()
     main()
