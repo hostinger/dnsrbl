@@ -41,3 +41,5 @@ optional arguments:
   --dry_run             Just print, do not change [env var: DRY_RUN]
 
 ```
+
+`powerdns` originaly belongs to: https://github.com/outini/python-powerdns
