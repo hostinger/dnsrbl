@@ -8,7 +8,7 @@ RUN apk add --no-cache \
 
 
 COPY dnsrbl.py .
-COPY powerdns .
+COPY powerdns /powerdns
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
