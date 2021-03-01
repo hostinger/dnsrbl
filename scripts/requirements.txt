@@ -1,4 +1,4 @@
 elasticsearch==7.10.1
 elasticsearch-dsl==7.3.0
-mysql-connector==2.2.9
 ConfigArgParse==1.2.3
+requests~=2.25.1
