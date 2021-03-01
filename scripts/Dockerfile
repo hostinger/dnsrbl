@@ -6,11 +6,9 @@ RUN apk add --no-cache \
   py3-pip \
   py3-setuptools 
 
-
-COPY dnsrbl.py .
-COPY powerdns /powerdns
+COPY hbl.py .
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
-CMD [ "python3", "./dnsrbl.py" ]
+CMD [ "python3", "./hbl.py" ]
