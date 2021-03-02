@@ -14,6 +14,7 @@ import (
 // @Description Block an IP address
 // @Accept  json
 // @Produce  json
+// @Tags Addresses
 // @Success 200
 // @Failure 422 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -35,6 +36,7 @@ func BlockHandler(c echo.Context) error {
 // @Accept  json
 // @Produce  json
 // @Param address path string true "The IP address"
+// @Tags Addresses
 // @Success 200
 // @Failure 422 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -55,6 +57,7 @@ func UnblockHandler(c echo.Context) error {
 // @Accept  json
 // @Produce  json
 // @Param address path string true "The IP address"
+// @Tags Addresses
 // @Success 200 {object} Address
 // @Failure 422 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -78,11 +81,12 @@ func GetHandler(c echo.Context) error {
 // @Description Get all IP addresses
 // @Accept  json
 // @Produce  json
+// @Tags Addresses
 // @Param address path string true "The IP address"
 // @Success 200 {array} Address
 // @Failure 422 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /blocklist/{address} [GET]
+// @Router /blocklist [GET]
 func GetAllHandler(c echo.Context) error {
 	addresses, err := GetAddresses(context.Background(), database.DB)
 	if err != nil {
