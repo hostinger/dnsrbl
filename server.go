@@ -15,6 +15,7 @@ func Start(address string) {
 	router := echo.New()
 	router.Validator = NewValidator()
 
+	router.GET("/health", HealthHandler)
 	router.POST("/api/v1/blocklist", BlockHandler)
 	router.GET("/api/v1/blocklist", GetAllHandler)
 	router.GET("/api/v1/blocklist/:address", GetHandler)

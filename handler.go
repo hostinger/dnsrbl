@@ -94,3 +94,7 @@ func GetAllHandler(c echo.Context) error {
 	}
 	return c.JSON(200, addresses)
 }
+
+func HealthHandler(c echo.Context) error {
+	return c.String(200, "OK")
+}
