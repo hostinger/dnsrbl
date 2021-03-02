@@ -5,8 +5,18 @@ import (
 	"database/sql"
 )
 
-func BlockAddress(ctx context.Context, db *sql.DB, address Address) error {
-	tx, err := db.BeginTx(ctx, nil)
+type Store struct {
+	Database *sql.DB
+}
+
+func NewStore(db *sql.DB) *Store {
+	return &Store{
+		Database: db,
+	}
+}
+
+func (s *Store) CreateAddress(ctx context.Context, address Address) error {
+	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -22,8 +32,8 @@ func BlockAddress(ctx context.Context, db *sql.DB, address Address) error {
 	return nil
 }
 
-func UnblockAddress(ctx context.Context, db *sql.DB, address string) error {
-	tx, err := db.BeginTx(ctx, nil)
+func (s *Store) DeleteAddress(ctx context.Context, address string) error {
+	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -38,8 +48,8 @@ func UnblockAddress(ctx context.Context, db *sql.DB, address string) error {
 	return nil
 }
 
-func GetAddress(ctx context.Context, db *sql.DB, ip string) (address Address, err error) {
-	tx, err := db.BeginTx(ctx, nil)
+func (s *Store) GetAddress(ctx context.Context, ip string) (address Address, err error) {
+	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return Address{}, err
 	}
@@ -54,8 +64,8 @@ func GetAddress(ctx context.Context, db *sql.DB, ip string) (address Address, er
 	return address, nil
 }
 
-func GetAddresses(ctx context.Context, db *sql.DB) (addresses []Address, err error) {
-	tx, err := db.BeginTx(ctx, nil)
+func (s *Store) GetAddresses(ctx context.Context) (addresses []Address, err error) {
+	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
