@@ -1,0 +1,68 @@
+---
+version: '2.0'
+services:
+  hbl-mariadb:
+    container_name: hbl-mariadb
+    image: mariadb
+    restart: always
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "sleep 5 && socat /dev/null TCP4:localhost:3306"]
+      interval: 5s
+      timeout: 15s
+      retries: 5
+    volumes:
+      - ./database/database.sql:/docker-entrypoint-initdb.d/database.sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=Smmsfnu3u0
+      - MYSQL_DATABASE=hbl
+      - MYSQL_USER=hbl
+      - MYSQL_PASSWORD=testing123
+
+  hbl-pdns:
+    container_name: hbl-pdns
+    image: interlegis/powerdns:4.4.0
+    ports:
+      - "10053:53"
+      - "10053:53/udp"
+      - "8081:8081"
+    volumes:
+      - ./config/docker/hbl-pdns/schema.sql:/usr/share/doc/pdns-backend-mysql/schema.mysql.sql
+      - ./config/docker/hbl-pdns/start.sh:/usr/local/bin/start.sh
+    environment:
+      - PDNSCONF_API_KEY=pdns_api_key
+      - PDNSCONF_MASTER=yes
+      - PDNSCONF_GMYSQL_DBNAME=pdns
+      - PDNSCONF_GMYSQL_USER=root
+      - PDNSCONF_GMYSQL_PASSWORD=Smmsfnu3u0
+    links:
+      - hbl-mariadb:mysql
+    depends_on:
+      hbl-mariadb:
+        condition: service_healthy 
+
+  hbl-api:
+    container_name: hbl-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+        - "9040:9040"
+    links:
+      - hbl-mariadb:mysql
+    environment:
+      - HBL_LISTEN_ADDRESS=0.0.0.0
+      - HBL_LISTEN_PORT=9040
+      - HBL_MYSQL_USERNAME=hbl
+      - HBL_MYSQL_PASSWORD=testing123
+      - HBL_MYSQL_DATABASE=hbl
+      - HBL_MYSQL_HOST=mysql
+      - HBL_MYSQL_PORT=3306
+      - CF_API_EMAIL=someaddr@somedomain.com
+      - CF_API_KEY=somekey
+      - CF_API_ACCOUNT=someaccount
+      - ABUSEIPDB_API_KEY=adkey
+    depends_on:
+      hbl-mariadb:
+        condition: service_healthy
