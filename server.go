@@ -6,26 +6,28 @@ import (
 	"net/http"
 	"time"
 
+	_ "github.com/hostinger/dnsrbl/docs"
 	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
-var server *http.Server
+var server *echo.Echo
 
 func Start(address string) {
-	router := echo.New()
-	router.Validator = NewValidator()
+	server = echo.New()
+	server.Validator = NewValidator()
 
-	router.GET("/health", HealthHandler)
-	router.POST("/api/v1/blocklist", BlockHandler)
-	router.GET("/api/v1/blocklist", GetAllHandler)
-	router.GET("/api/v1/blocklist/:address", GetHandler)
-	router.DELETE("/api/v1/blocklist/:address", UnblockHandler)
+	server.GET("/health", HealthHandler)
+	server.POST("/api/v1/blocklist", BlockHandler)
+	server.GET("/api/v1/blocklist", GetAllHandler)
+	server.GET("/api/v1/blocklist/:address", GetHandler)
+	server.DELETE("/api/v1/blocklist/:address", UnblockHandler)
 
-	server = &http.Server{
-		Addr:    address,
-		Handler: router,
+	server.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	if err := server.Start(address); err != nil && err != http.ErrServerClosed {
+		server.Logger.Fatal("Exiting...")
 	}
-	log.Fatal(server.ListenAndServe())
 }
 
 func Stop() {
