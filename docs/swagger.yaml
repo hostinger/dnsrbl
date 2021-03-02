@@ -1,12 +1,17 @@
 basePath: /api/v1
 definitions:
-  common.SimpleResponse:
+  dnsrbl.Address:
     properties:
-      data:
-        type: object
-      message:
+      address:
         type: string
-      status:
+      comment:
+        type: string
+      createdAt:
+        type: string
+    type: object
+  dnsrbl.ErrorResponse:
+    properties:
+      message:
         type: string
     type: object
 host: localhost:8080
@@ -16,7 +21,37 @@ info:
   title: Hostinger Block List API
   version: "1.0"
 paths:
-  /block:
+  /blocklist:
+    get:
+      consumes:
+      - application/json
+      description: Get all IP addresses
+      parameters:
+      - description: The IP address
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dnsrbl.Address'
+            type: array
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
+      summary: Get all IP addresses
+      tags:
+      - Addresses
     post:
       consumes:
       - application/json
@@ -25,52 +60,51 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/common.SimpleResponse'
+          description: ""
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/common.SimpleResponse'
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/common.SimpleResponse'
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
       summary: Block an IP addresss
-  /search/{address}:
-    get:
-      consumes:
-      - application/json
-      description: Search for an IP address
-      parameters:
-      - description: IP address to search for
-        in: path
-        name: address
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/common.SimpleResponse'
-        "422":
-          description: Unprocessable Entity
-          schema:
-            $ref: '#/definitions/common.SimpleResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/common.SimpleResponse'
-      summary: Search for an IP address
-  /unblock/{address}:
+      tags:
+      - Addresses
+  /blocklist/{address}:
     delete:
       consumes:
       - application/json
       description: Unblock an IP address
       parameters:
-      - description: IP address to unblock
+      - description: The IP address
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
+      summary: Unblock an IP addresss
+      tags:
+      - Addresses
+    get:
+      consumes:
+      - application/json
+      description: Get an IP address
+      parameters:
+      - description: The IP address
         in: path
         name: address
         required: true
@@ -81,14 +115,16 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/common.SimpleResponse'
+            $ref: '#/definitions/dnsrbl.Address'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/common.SimpleResponse'
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/common.SimpleResponse'
-      summary: Unblock an IP addresss
+            $ref: '#/definitions/dnsrbl.ErrorResponse'
+      summary: Get an IP address
+      tags:
+      - Addresses
 swagger: "2.0"
