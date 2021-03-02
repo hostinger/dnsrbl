@@ -12,17 +12,18 @@ CREATE TABLE IF NOT EXISTS `addresses` (
 
 -- Procedures
 
-DELIMITER //
+DELIMITER / /
 
 -- CALL addresses()
 -- Lists IP addresses.
-DROP PROCEDURE IF EXISTS addresses //
-CREATE PROCEDURE addresses()
-BEGIN
-  SELECT
-    INET_NTOA(address) AS address, comment, expires_at, created_at, updated_at
-  FROM
-    addresses
-  ORDER BY
-    created_at DESC;
-END //
+DROP PROCEDURE IF EXISTS addresses / / CREATE PROCEDURE addresses() BEGIN
+SELECT
+  INET_NTOA(address) AS address,
+  comment,
+  updated_at
+FROM
+  addresses
+ORDER BY
+  created_at DESC;
+
+END / /
