@@ -6,22 +6,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hostinger/dnsrbl/database"
 	"github.com/labstack/echo/v4"
 )
 
 var server *http.Server
 
-// Start ...
 func Start(address string) {
-	handler := NewHandler(
-		NewMySQLAddressStore(database.DB),
-	)
-
 	router := echo.New()
-	router.POST("/api/v1/block", handler.BlockHandler)
-	router.GET("/api/v1/search/:address", handler.SearchHandler)
-	router.DELETE("/api/v1/unblock/:address", handler.UnblockHandler)
+	router.Validator = NewValidator()
+
+	router.POST("/api/v1/blocklist", BlockHandler)
+	router.GET("/api/v1/blocklist", GetAllHandler)
+	router.GET("/api/v1/blocklist/:address", GetHandler)
+	router.DELETE("/api/v1/blocklist/:address", UnblockHandler)
 
 	server = &http.Server{
 		Addr:    address,
@@ -30,7 +27,6 @@ func Start(address string) {
 	log.Fatal(server.ListenAndServe())
 }
 
-// Stop ...
 func Stop() {
 	log.Print("Shutting down server with timeout of 5 seconds...")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
