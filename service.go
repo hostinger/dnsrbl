@@ -4,18 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"log"
 	"net"
+
+	"github.com/cloudflare/cloudflare-go"
 )
 
 type Service struct {
-	Config *Config
-	Store  *Store
+	cfAccount string
+	cfClient  *cloudflare.API
+	Config    *Config
+	Store     *Store
 }
 
-func NewService(cfg *Config, store *Store) *Service {
+func NewService(cfg *Config, store *Store, cfClient *cloudflare.API, cfAccount string) *Service {
 	return &Service{
-		Config: cfg,
-		Store:  store,
+		cfAccount: cfAccount,
+		cfClient:  cfClient,
+		Store:     store,
+		Config:    cfg,
 	}
 }
 
@@ -25,6 +33,9 @@ func (s *Service) BlockAddress(address Address) error {
 	}
 	if err := s.Store.CreateAddress(context.Background(), address); err != nil {
 		return err
+	}
+	if err := s.BlockIPAddressInCloudflare(address.Address); err != nil {
+		log.Printf("Failed to execute BlockIPAddressInCloudflare: %s", err)
 	}
 	return nil
 }
@@ -36,6 +47,9 @@ func (s *Service) UnblockAddress(ip string) error {
 	}
 	if err := s.Store.DeleteAddress(context.Background(), ip); err != nil {
 		return err
+	}
+	if err := s.UnblockIPAddressInCloudflare(ip); err != nil {
+		log.Printf("Failed to execute UnblockIPAddressInCloudflare: %s", err)
 	}
 	return nil
 }
@@ -67,4 +81,49 @@ func (s *Service) IsAddressInAllowList(ip string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Service) BlockIPAddressInCloudflare(ip string) error {
+	if net.ParseIP(ip) == nil {
+		return fmt.Errorf("Address '%s' is not a valid IP address.", ip)
+	}
+	rule := cloudflare.AccessRule{
+		Mode: "block",
+		Configuration: cloudflare.AccessRuleConfiguration{
+			Target: "ip",
+			Value:  ip,
+		},
+		Notes: "Created automatically by HBL API.",
+	}
+	response, err := s.cfClient.CreateAccountAccessRule(context.Background(), s.cfAccount, rule)
+	if err != nil || response.Success == false {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) UnblockIPAddressInCloudflare(ip string) error {
+	if net.ParseIP(ip) == nil {
+		return fmt.Errorf("Address '%s' is not a valid IP address.", ip)
+	}
+	rule := cloudflare.AccessRule{
+		Mode: "block",
+		Configuration: cloudflare.AccessRuleConfiguration{
+			Target: "ip",
+			Value:  ip,
+		},
+		Notes: "Created automatically by HBL API.",
+	}
+	rules, err := s.cfClient.ListAccountAccessRules(context.Background(), s.cfAccount, rule, 1)
+	if err != nil {
+		return err
+	}
+	if rules.Count <= 0 || rules.Count > 1 {
+		return fmt.Errorf("AccessRule for IP address '%s' was not found. ", ip)
+	}
+	response, err := s.cfClient.DeleteAccountAccessRule(context.Background(), s.cfAccount, rules.Result[0].ID)
+	if err != nil || response.Success == false {
+		return err
+	}
+	return nil
 }
