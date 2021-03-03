@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
 	"github.com/hostinger/dnsrbl/pkg/cloudflare"
@@ -48,7 +49,7 @@ func main() {
 	flag.Parse()
 
 	// Database
-	db, err := hbl.InitDB(*mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase)
+	db, err := hbl.InitDB(*mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase, time.Second*120)
 	if err != nil {
 		log.Fatalf("Failed to initialize connection to the database: %s", err)
 	}
