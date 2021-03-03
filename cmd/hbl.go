@@ -7,8 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cloudflare/cloudflare-go"
 	"github.com/hostinger/dnsrbl"
+	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
+	"github.com/hostinger/dnsrbl/pkg/cloudflare"
 )
 
 var (
@@ -31,6 +32,10 @@ var (
 )
 
 var (
+	abuseipdbKey = flag.String("abuseipdb.key", os.Getenv("ABUSEIPDB_API_KEY"), "AbuseIPDB API Key.")
+)
+
+var (
 	cfgFile = flag.String("config.file", "config.yml", "Path to the configuration file.")
 )
 
@@ -42,11 +47,13 @@ var (
 func main() {
 	flag.Parse()
 
+	// Database
 	db, err := dnsrbl.InitDB(*mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase)
 	if err != nil {
 		log.Fatalf("Failed to initialize connection to the database: %s", err)
 	}
 
+	// Config
 	config, err := dnsrbl.NewConfigFromFile(*cfgFile)
 	if err != nil {
 		log.Fatalf("Failed to load configuration file: %s", err)
@@ -55,12 +62,19 @@ func main() {
 		log.Fatalf("Failed to validate configuration file: %s", err)
 	}
 
-	cfClient, err := cloudflare.New(*cloudflareKey, *cloudflareEmail)
+	// Cloudflare
+	cfClient, err := cloudflare.NewClient(*cloudflareAccount, *cloudflareEmail, *cloudflareKey)
 	if err != nil {
-		log.Fatalf("Failed to initialize connection to Cloudflare API: %s", err)
+		log.Printf("Failed to initialize Cloudflare client: %s", err)
 	}
 
-	api := dnsrbl.NewAPI(config, db, cfClient, *cloudflareAccount)
+	// AbuseIPDB
+	abuseipdbClient, err := abuseipdb.NewClient(*abuseipdbKey)
+	if err != nil {
+		log.Printf("Failed to initialize AbuseIPDB client: %s", err)
+	}
+
+	api := dnsrbl.NewAPI(config, db, cfClient, abuseipdbClient)
 
 	go func() {
 		api.Start(*listenAddress, *listenPort)
