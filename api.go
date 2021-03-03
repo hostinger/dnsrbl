@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloudflare/cloudflare-go"
 	_ "github.com/hostinger/dnsrbl/docs"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -21,7 +22,7 @@ type API struct {
 	Service  *Service
 }
 
-func NewAPI(cfg *Config, db *sql.DB) *API {
+func NewAPI(cfg *Config, db *sql.DB, cfClient *cloudflare.API, cfAccount string) *API {
 	server := echo.New()
 
 	server.HideBanner = true
@@ -31,7 +32,7 @@ func NewAPI(cfg *Config, db *sql.DB) *API {
 	server.Use(middleware.Recover())
 
 	store := NewStore(db)
-	service := NewService(cfg, store)
+	service := NewService(cfg, store, cfClient, cfAccount)
 
 	return &API{
 		Service:  service,
