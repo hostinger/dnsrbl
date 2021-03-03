@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/hostinger/dnsrbl"
 	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
 	"github.com/hostinger/dnsrbl/pkg/cloudflare"
+	"github.com/hostinger/dnsrbl/pkg/hbl"
 )
 
 var (
@@ -48,13 +48,13 @@ func main() {
 	flag.Parse()
 
 	// Database
-	db, err := dnsrbl.InitDB(*mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase)
+	db, err := hbl.InitDB(*mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase)
 	if err != nil {
 		log.Fatalf("Failed to initialize connection to the database: %s", err)
 	}
 
 	// Config
-	config, err := dnsrbl.NewConfigFromFile(*cfgFile)
+	config, err := hbl.NewConfigFromFile(*cfgFile)
 	if err != nil {
 		log.Fatalf("Failed to load configuration file: %s", err)
 	}
@@ -74,7 +74,7 @@ func main() {
 		log.Printf("Failed to initialize AbuseIPDB client: %s", err)
 	}
 
-	api := dnsrbl.NewAPI(config, db, cfClient, abuseipdbClient)
+	api := hbl.NewAPI(config, db, cfClient, abuseipdbClient)
 
 	go func() {
 		api.Start(*listenAddress, *listenPort)

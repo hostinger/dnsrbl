@@ -1,4 +1,4 @@
-package dnsrbl
+package hbl
 
 import (
 	"context"
