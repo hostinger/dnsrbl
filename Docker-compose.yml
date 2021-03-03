@@ -4,14 +4,9 @@ services:
   hbl-mariadb:
     container_name: hbl-mariadb
     image: mariadb
-    restart: always
+    restart: on-failure
     ports:
       - "3306:3306"
-    healthcheck:
-      test: ["CMD-SHELL", "sleep 5 && socat /dev/null TCP4:localhost:3306"]
-      interval: 5s
-      timeout: 15s
-      retries: 5
     volumes:
       - ./database/database.sql:/docker-entrypoint-initdb.d/database.sql
     environment:
@@ -39,8 +34,7 @@ services:
     links:
       - hbl-mariadb:mysql
     depends_on:
-      hbl-mariadb:
-        condition: service_healthy 
+      - hbl-mariadb
 
   hbl-api:
     container_name: hbl-api
@@ -64,5 +58,4 @@ services:
       - CF_API_ACCOUNT=someaccount
       - ABUSEIPDB_API_KEY=adkey
     depends_on:
-      hbl-mariadb:
-        condition: service_healthy
+      - hbl-mariadb
