@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func InitDB(ctx context.Context, username string, password string, host string, port string, database string) (*sql.DB, error) {
+func InitDB(ctx context.Context, username, password, host, port, database string) (*sql.DB, error) {
 	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
 		username, password, host, port, database)
 
@@ -21,7 +21,7 @@ func InitDB(ctx context.Context, username string, password string, host string, 
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, errors.New("Timeout exceeded.")
+			return nil, errors.New("timeout exceeded")
 		case <-ticker.C:
 			db, err := sql.Open("mysql", uri)
 			if err != nil {
@@ -31,7 +31,7 @@ func InitDB(ctx context.Context, username string, password string, host string, 
 			if err == nil {
 				return db, nil
 			}
-			log.Printf("Failed to establish connection to the database: %s", err)
+			log.Printf("failed to establish connection to the database: %s", err)
 		}
 	}
 }

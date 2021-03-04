@@ -38,7 +38,7 @@ type Zone struct {
 	RRSets []RRSet `json:"rrsets"`
 }
 
-func NewClient(scheme string, host string, port string, key string) (*Client, error) {
+func NewClient(scheme, host, port, key string) (*Client, error) {
 	baseURL := fmt.Sprintf("%s://%s:%s/api/v1/servers/localhost", scheme, host, port)
 	return &Client{
 		Client: &http.Client{
@@ -49,7 +49,7 @@ func NewClient(scheme string, host string, port string, key string) (*Client, er
 	}, nil
 }
 
-func (c *Client) Call(ctx context.Context, uri string, method string, data interface{}) error {
+func (c *Client) Call(ctx context.Context, uri, method string, data interface{}) error {
 	body, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -69,24 +69,24 @@ func (c *Client) Call(ctx context.Context, uri string, method string, data inter
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("Error: %s", string(body))
+		return fmt.Errorf("error: %s", string(body))
 	}
 
 	return nil
 }
 
-func (c *Client) Block(ctx context.Context, ip string, zone string) error {
+func (c *Client) PatchZone(ctx context.Context, ip, zone, action string) error {
 	if net.ParseIP(ip) == nil {
-		return errors.New("Argument 'ip' must be a valid IP address.")
+		return errors.New("argument 'ip' must be a valid IP address")
 	}
 	reverseIP := dnsutils.ReverseAddress(strings.Split(ip, "."))
 	data := Zone{
 		RRSets: []RRSet{
 			{
-				Name:       fmt.Sprintf("%s.%s.", reverseIP, "hostinger.rbl"),
+				Name:       fmt.Sprintf("%s.%s.", reverseIP, zone),
 				Type:       "A",
 				TTL:        3600,
-				ChangeType: "REPLACE",
+				ChangeType: action,
 				Records: []Record{
 					{
 						Content:  "127.0.0.1",
@@ -103,30 +103,10 @@ func (c *Client) Block(ctx context.Context, ip string, zone string) error {
 	return nil
 }
 
-func (c *Client) Unblock(ctx context.Context, ip string, zone string) error {
-	if net.ParseIP(ip) == nil {
-		return errors.New("Argument 'ip' must be a valid IP address.")
-	}
-	reverseIP := dnsutils.ReverseAddress(strings.Split(ip, "."))
-	data := Zone{
-		RRSets: []RRSet{
-			{
-				Name:       fmt.Sprintf("%s.%s.", reverseIP, "hostinger.rbl"),
-				Type:       "A",
-				TTL:        3600,
-				ChangeType: "DELETE",
-				Records: []Record{
-					{
-						Content:  "127.0.0.1",
-						Disabled: false,
-					},
-				},
-			},
-		},
-	}
-	uri := fmt.Sprintf("%s/zones/%s", c.BaseURL, zone)
-	if err := c.Call(ctx, uri, "PATCH", data); err != nil {
-		return err
-	}
-	return nil
+func (c *Client) Block(ctx context.Context, ip, zone string) error {
+	return c.PatchZone(ctx, ip, zone, "REPLACE")
+}
+
+func (c *Client) Unblock(ctx context.Context, ip, zone string) error {
+	return c.PatchZone(ctx, ip, zone, "DELETE")
 }

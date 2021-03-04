@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/hostinger/dnsrbl/docs"
+	_ "github.com/hostinger/dnsrbl/docs" // Needed for Swagger
 	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
 	"github.com/hostinger/dnsrbl/pkg/cloudflare"
 	"github.com/hostinger/dnsrbl/pkg/dns"
@@ -55,25 +55,18 @@ func NewAPI(db *sql.DB,
 }
 
 func (api *API) init() {
-	// Blocklist Routes
-	{
-		api.Server.Add("GET", "/api/v1/addresses", api.handleAddressesGetAll)
-		api.Server.Add("GET", "/api/v1/addresses/:ip", api.handleAddressesGetOne)
-		api.Server.Add("DELETE", "/api/v1/addresses/:ip", api.handleAddressesDelete)
-		api.Server.Add("POST", "/api/v1/addresses", api.handleAddressesPost)
-	}
-	// Common Routes
-	{
-		api.Server.Add("GET", "/version", api.handleVersion)
-		api.Server.Add("GET", "/health", api.handleHealth)
-	}
-	// Swagger
-	{
-		api.Server.Add("GET", "/swagger/*", echoSwagger.WrapHandler)
-	}
+	api.Server.Add("GET", "/api/v1/addresses", api.handleAddressesGetAll)
+	api.Server.Add("GET", "/api/v1/addresses/:ip", api.handleAddressesGetOne)
+	api.Server.Add("DELETE", "/api/v1/addresses/:ip", api.handleAddressesDelete)
+	api.Server.Add("POST", "/api/v1/addresses", api.handleAddressesPost)
+
+	api.Server.Add("GET", "/version", api.handleVersion)
+	api.Server.Add("GET", "/health", api.handleHealth)
+
+	api.Server.Add("GET", "/swagger/*", echoSwagger.WrapHandler)
 }
 
-func (api *API) Start(host string, port string) error {
+func (api *API) Start(host, port string) error {
 	api.init()
 	listenAddress := fmt.Sprintf("%s:%s", host, port)
 	log.Printf("Listening on %s", listenAddress)
@@ -91,6 +84,6 @@ func (api *API) Stop() {
 		cancel()
 	}()
 	if err := api.Server.Shutdown(ctx); err != nil {
-		log.Fatal("Failed clean shutdown, exiting with errors.")
+		log.Printf("Failed clean shutdown, exiting with errors.")
 	}
 }

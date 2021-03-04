@@ -10,5 +10,4 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/swaggo/echo-swagger v1.1.0
 	github.com/swaggo/swag v1.7.0
-	gopkg.in/yaml.v2 v2.4.0
 )

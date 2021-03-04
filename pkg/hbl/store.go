@@ -15,7 +15,7 @@ func NewAddressStore(db *sql.DB) *AddressStore {
 	}
 }
 
-func (s *AddressStore) Create(ctx context.Context, address Address) error {
+func (s *AddressStore) Create(ctx context.Context, address *Address) error {
 	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -40,8 +40,7 @@ func (s *AddressStore) Create(ctx context.Context, address Address) error {
 	_, err = tx.ExecContext(ctx, q, address.IP, address.Author, address.Action, address.Comment)
 
 	if err != nil {
-		tx.Rollback()
-		return err
+		return tx.Rollback()
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -64,8 +63,7 @@ func (s *AddressStore) Delete(ctx context.Context, ip string) error {
 	`
 	_, err = tx.ExecContext(ctx, q, ip)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return tx.Rollback()
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -92,7 +90,8 @@ func (s *AddressStore) GetOne(ctx context.Context, ip string) (address Address, 
 		LIMIT 1
 	`
 	result := tx.QueryRowContext(ctx, q, ip)
-	if err := result.Scan(&address.IP, &address.Author, &address.Action, &address.Comment, &address.CreatedAt); err != nil {
+	if err := result.Scan(&address.IP, &address.Author, &address.Action,
+		&address.Comment, &address.CreatedAt); err != nil {
 		return Address{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -118,12 +117,12 @@ func (s *AddressStore) GetAll(ctx context.Context) (addresses []Address, err err
 	`
 	results, err := tx.QueryContext(ctx, q)
 	if err != nil {
-		tx.Rollback()
-		return nil, err
+		return nil, tx.Rollback()
 	}
 	for results.Next() {
 		var address Address
-		if err := results.Scan(&address.IP, &address.Author, &address.Action, &address.Comment, &address.CreatedAt); err != nil {
+		if err := results.Scan(&address.IP, &address.Author, &address.Action,
+			&address.Comment, &address.CreatedAt); err != nil {
 			return nil, err
 		}
 		addresses = append(addresses, address)
@@ -154,12 +153,12 @@ func (s *AddressStore) GetAllByAction(ctx context.Context, action string) (addre
 	`
 	results, err := tx.QueryContext(ctx, q, action)
 	if err != nil {
-		tx.Rollback()
-		return nil, err
+		return nil, tx.Rollback()
 	}
 	for results.Next() {
 		var address Address
-		if err := results.Scan(&address.IP, &address.Author, &address.Action, &address.Comment, &address.CreatedAt); err != nil {
+		if err := results.Scan(&address.IP, &address.Author, &address.Action,
+			&address.Comment, &address.CreatedAt); err != nil {
 			return nil, err
 		}
 		addresses = append(addresses, address)
@@ -181,7 +180,7 @@ func NewMetadataStore(db *sql.DB) *MetadataStore {
 	}
 }
 
-func (s *MetadataStore) Create(ctx context.Context, metadata AbuseIpDbMetadata) error {
+func (s *MetadataStore) Create(ctx context.Context, metadata *AbuseIPDBMetadata) error {
 	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -220,8 +219,7 @@ func (s *MetadataStore) Create(ctx context.Context, metadata AbuseIpDbMetadata) 
 	)
 
 	if err != nil {
-		tx.Rollback()
-		return err
+		return tx.Rollback()
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -244,8 +242,7 @@ func (s *MetadataStore) Delete(ctx context.Context, ip string) error {
 	`
 	_, err = tx.ExecContext(ctx, q, ip)
 	if err != nil {
-		tx.Rollback()
-		return err
+		return tx.Rollback()
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -253,10 +250,10 @@ func (s *MetadataStore) Delete(ctx context.Context, ip string) error {
 	return nil
 }
 
-func (s *MetadataStore) GetOne(ctx context.Context, ip string) (metadata AbuseIpDbMetadata, err error) {
+func (s *MetadataStore) GetOne(ctx context.Context, ip string) (metadata AbuseIPDBMetadata, err error) {
 	tx, err := s.Database.BeginTx(ctx, nil)
 	if err != nil {
-		return AbuseIpDbMetadata{}, err
+		return AbuseIPDBMetadata{}, err
 	}
 	q := `
 		SELECT
@@ -280,10 +277,10 @@ func (s *MetadataStore) GetOne(ctx context.Context, ip string) (metadata AbuseIp
 		&metadata.ISP, &metadata.TotalReports,
 		&metadata.NumDistinctUsers,
 		&metadata.LastReportedAt); err != nil {
-		return AbuseIpDbMetadata{}, err
+		return AbuseIPDBMetadata{}, err
 	}
 	if err := tx.Commit(); err != nil {
-		return AbuseIpDbMetadata{}, err
+		return AbuseIPDBMetadata{}, err
 	}
 	return metadata, nil
 }

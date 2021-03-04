@@ -31,19 +31,19 @@ func (m *BlockRequest) Bind(c echo.Context, a *Address) error {
 
 func (m *BlockRequest) Validate() error {
 	if net.ParseIP(m.IP) == nil {
-		return errors.New("Field 'IP' must be a valid IP address.")
+		return errors.New("field 'IP' must be a valid IP address")
 	}
-	if len(strings.TrimSpace(m.Author)) == 0 {
-		return errors.New("Field 'Author' must not be empty.")
+	if strings.TrimSpace(m.Author) == "" {
+		return errors.New("field 'Author' must not be empty")
 	}
-	if len(strings.TrimSpace(m.Comment)) == 0 {
-		return errors.New("Field 'Comment' must not be empty.")
+	if strings.TrimSpace(m.Comment) == "" {
+		return errors.New("field 'Comment' must not be empty")
 	}
-	if len(strings.TrimSpace(m.Action)) == 0 {
-		return errors.New("Field 'Action' must not be empty.")
+	if strings.TrimSpace(m.Action) == "" {
+		return errors.New("field 'Action' must not be empty")
 	}
 	if m.Action != "Block" && m.Action != "Allow" {
-		return errors.New("Field 'Action' must be valid.")
+		return errors.New("field 'Action' must be valid")
 	}
 	return nil
 }
