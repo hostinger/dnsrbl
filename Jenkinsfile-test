@@ -1,0 +1,35 @@
+#!groovy​
+
+pipeline {
+  options {
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  agent {
+    label 'docker'
+  }
+
+  environment {
+    REPO = 'hostinger-hbl'
+    TAG = sh(script: "git log --pretty=format:'%h' -n 1", returnStdout: true).trim()
+  }
+
+  stages {
+    stage('Run lint') {
+      steps {
+        sh "docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.37.1 golangci-lint run -c .golangci.yml "
+      }
+    }
+
+    stage("Publish Coverage") {
+      steps {
+        step([
+          $class: 'CloverPublisher',
+          cloverReportDir: 'lint/logs',
+          cloverReportFileName: 'clover.xml',
+        ])
+      }
+    }
+  }
+}
