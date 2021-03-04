@@ -29,14 +29,11 @@ func NewService(cfg *Config, store *Store,
 }
 
 func (s *Service) BlockAddress(address Address) error {
-	if s.IsAddressInAllowList(address.Address) {
+	if s.IsAddressInAllowList(address.IP) {
 		return errors.New("That IP address is in allow list.")
 	}
 	if err := s.Store.CreateAddress(context.Background(), address); err != nil {
 		return err
-	}
-	if err := s.cfClient.BlockIPAddress(address.Address); err != nil {
-		log.Printf("Failed to execute BlockIPAddressInCloudflare: %s", err)
 	}
 	return nil
 }

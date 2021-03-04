@@ -1,57 +1,34 @@
 package hbl
 
 import (
-	"errors"
-	"net"
-	"strings"
 	"time"
-
-	"github.com/labstack/echo/v4"
 )
 
 type ErrorResponse struct {
-	Message string `json:"message"`
+	Message string
+}
+
+type AbuseIpDbMetadata struct {
+	IP                   string
+	ISP                  string
+	UsageType            string
+	CountryCode          string
+	TotalReports         int
+	NumDistinctUsers     int
+	AbuseConfidenceScore int
+	LastReportedAt       *time.Time
 }
 
 type Address struct {
-	Address   string
-	Comment   string
-	CreatedAt time.Time
+	IP                  string
+	Author              string
+	Comment             string
+	IsBlockedPDNS       bool
+	IsBlockedCloudflare bool
+	CreatedAt           time.Time
+	Metadata            AddressMetadata
 }
 
-func (m *Address) Validate() error {
-	if net.ParseIP(m.Address) == nil {
-		return errors.New("Field 'Address' must be a valid IP address.")
-	}
-	if len(strings.TrimSpace(m.Comment)) == 0 {
-		return errors.New("Field 'Comment' must be not empty.")
-	}
-	return nil
-}
-
-type BlockAddressRequest struct {
-	Address string `json:"address"`
-	Comment string `json:"comment"`
-}
-
-func (m *BlockAddressRequest) Bind(c echo.Context, a *Address) error {
-	if err := c.Bind(m); err != nil {
-		return err
-	}
-	if err := m.Validate(); err != nil {
-		return err
-	}
-	a.Address = m.Address
-	a.Comment = m.Comment
-	return nil
-}
-
-func (m *BlockAddressRequest) Validate() error {
-	if net.ParseIP(m.Address) == nil {
-		return errors.New("Field 'Address' must be a valid IP address.")
-	}
-	if len(strings.TrimSpace(m.Comment)) == 0 {
-		return errors.New("Field 'Comment' must be not empty.")
-	}
-	return nil
+type AddressMetadata struct {
+	AbuseIpDbMetadata AbuseIpDbMetadata
 }

@@ -3,6 +3,7 @@ package hbl
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/labstack/echo/v4"
@@ -17,14 +18,36 @@ import (
 // @Failure     422 {object} ErrorResponse
 // @Failure     500 {object} ErrorResponse
 // @Router      /blocklist [POST]
-func (api *API) handleBlocklistPost(c echo.Context) error {
-	var req BlockAddressRequest
+func (api *API) handleBlock(c echo.Context) error {
+	var req BlockRequest
 	var address Address
 	if err := req.Bind(c, &address); err != nil {
 		return c.JSON(422, ErrorResponse{Message: fmt.Sprintf("Failed to validate request body: %s", err)})
 	}
+	// Fetch metadata about the IP address
+	report, err := api.abuseipdbClient.Check(req.IP)
+	if err != nil {
+		log.Printf("Failed to fetch AbuseIPDB metadata: %s", err)
+	}
+	address.Metadata.AbuseIpDbMetadata = AbuseIpDbMetadata{
+		IP:                   req.IP,
+		ISP:                  report.Data.Isp,
+		UsageType:            report.Data.UsageType,
+		CountryCode:          report.Data.CountryCode,
+		TotalReports:         report.Data.TotalReports,
+		LastReportedAt:       report.Data.LastReportedAt,
+		NumDistinctUsers:     report.Data.NumDistinctUsers,
+		AbuseConfidenceScore: report.Data.AbuseConfidenceScore,
+	}
+	// Create entity in database
 	if err := api.Service.BlockAddress(address); err != nil {
 		return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute BlockAddress: %s", err)})
+	}
+	// Block in Cloudflare
+	if *req.BlockCloudflare == true {
+		if err := api.cfClient.BlockIPAddress(req.IP); err != nil {
+			return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute BlockIPAddress: %s", err)})
+		}
 	}
 	return c.JSON(200, nil)
 }
@@ -39,11 +62,7 @@ func (api *API) handleBlocklistPost(c echo.Context) error {
 // @Failure     422 {object} ErrorResponse
 // @Failure     500 {object} ErrorResponse
 // @Router      /blocklist/{ip} [GET]
-func (api *API) handleBlocklistGet(c echo.Context) error {
-	type blocklistGetResponse struct {
-		Address string `json:"address"`
-		Comment string `json:"comment"`
-	}
+func (api *API) handleListOne(c echo.Context) error {
 	ip := c.Param("ip")
 	if net.ParseIP(ip) == nil {
 		return c.JSON(422, ErrorResponse{Message: "Param 'ip' must be a valid IP address."})
@@ -55,11 +74,7 @@ func (api *API) handleBlocklistGet(c echo.Context) error {
 	if err != nil && err != sql.ErrNoRows {
 		return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute GetAddress: %s", err)})
 	}
-	response := blocklistGetResponse{
-		Address: address.Address,
-		Comment: address.Comment,
-	}
-	return c.JSON(200, response)
+	return c.JSON(200, address)
 }
 
 // @Summary     Delete a blocked IP address.
@@ -72,7 +87,7 @@ func (api *API) handleBlocklistGet(c echo.Context) error {
 // @Failure     422 {object} ErrorResponse
 // @Failure     500 {object} ErrorResponse
 // @Router      /blocklist/{ip} [DELETE]
-func (api *API) handleBlocklistDelete(c echo.Context) error {
+func (api *API) handleUnblock(c echo.Context) error {
 	ip := c.Param("ip")
 	if net.ParseIP(ip) == nil {
 		return c.JSON(422, ErrorResponse{Message: "Param 'ip' must be a valid IP address."})
@@ -92,7 +107,7 @@ func (api *API) handleBlocklistDelete(c echo.Context) error {
 // @Failure     422 {object} ErrorResponse
 // @Failure     500 {object} ErrorResponse
 // @Router      /blocklist/{ip} [DELETE]
-func (api *API) handleBlocklistGetAll(c echo.Context) error {
+func (api *API) handleListAll(c echo.Context) error {
 	addresses, err := api.Service.GetAddresses()
 	if err != nil {
 		return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute GetAddresses: %s", err)})
