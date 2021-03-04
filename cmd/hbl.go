@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"os"
 	"os/signal"
@@ -15,78 +14,54 @@ import (
 	"github.com/hostinger/dnsrbl/pkg/hbl"
 )
 
-var (
-	mysqlUsername = flag.String("db.username", os.Getenv("HBL_MYSQL_USERNAME"), "Username for database connection.")
-	mysqlPassword = flag.String("db.password", os.Getenv("HBL_MYSQL_PASSWORD"), "Password for database connection.")
-	mysqlDatabase = flag.String("db.database", os.Getenv("HBL_MYSQL_DATABASE"), "Name of the database.")
-	mysqlHost     = flag.String("db.host", os.Getenv("HBL_MYSQL_HOST"), "Host for database connection.")
-	mysqlPort     = flag.String("db.port", os.Getenv("HBL_MYSQL_PORT"), "Port for database connection.")
-)
-
-var (
-	listenAddress = flag.String("listen.address", os.Getenv("HBL_LISTEN_ADDRESS"), "Listen address for HTTP server.")
-	listenPort    = flag.String("listen.port", os.Getenv("HBL_LISTEN_PORT"), "Listen port for HTTP server.")
-)
-
-var (
-	cloudflareKey     = flag.String("cf.api-key", os.Getenv("CF_API_KEY"), "Cloudflare API Key.")
-	cloudflareEmail   = flag.String("cf.api-email", os.Getenv("CF_API_EMAIL"), "Cloudflare API Email.")
-	cloudflareAccount = flag.String("cf.api-account", os.Getenv("CF_API_ACCOUNT"), "Cloudflare API Account.")
-)
-
-var (
-	abuseipdbKey = flag.String("abuseipdb.key", os.Getenv("ABUSEIPDB_API_KEY"), "AbuseIPDB API Key.")
-)
-
-var (
-	pdnsScheme = flag.String("pdns.scheme", os.Getenv("PDNS_API_SCHEME"), "PowerDNS API Scheme.")
-	pdnsHost   = flag.String("pdns.host", os.Getenv("PDNS_API_HOST"), "PowerDNS API Host.")
-	pdnsPort   = flag.String("pdns.port", os.Getenv("PDNS_API_PORT"), "PowerDNS API Port.")
-	pdnsKey    = flag.String("pdns.key", os.Getenv("PDNS_API_KEY"), "PowerDNS API Key.")
-)
-
-var (
-	cfgFile = flag.String("config.file", "config.yml", "Path to the configuration file.")
-)
-
 // @title Hostinger Block List API
 // @version 1.0
 // @description Hostinger HTTP service for managing IP address block lists.
 // @host localhost:8080
 // @BasePath /api/v1
 func main() {
-	flag.Parse()
 
 	// Database
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	db, err := hbl.InitDB(ctx, *mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase)
+	db, err := hbl.InitDB(ctx,
+		os.Getenv("HBL_MYSQL_USERNAME"),
+		os.Getenv("HBL_MYSQL_PASSWORD"),
+		os.Getenv("HBL_MYSQL_HOST"),
+		os.Getenv("HBL_MYSQL_PORT"),
+		os.Getenv("HBL_MYSQL_DATABASE"))
 	if err != nil {
-		log.Fatalf("Failed to establish connection to the database: %s", err)
+		log.Printf("Failed to establish connection to the database: %s", err)
 	}
 
 	// Cloudflare
-	cfClient, err := cloudflare.NewClient(*cloudflareAccount, *cloudflareEmail, *cloudflareKey)
+	cfClient, err := cloudflare.NewClient(os.Getenv("CF_API_ACCOUNT"), os.Getenv("CF_API_EMAIL"), os.Getenv("CF_API_KEY"))
 	if err != nil {
 		log.Printf("Failed to initialize Cloudflare client: %s", err)
 	}
 
 	// AbuseIPDB
-	abuseipdbClient, err := abuseipdb.NewClient(*abuseipdbKey)
+	abuseipdbClient, err := abuseipdb.NewClient(os.Getenv("ABUSEIPDB_API_KEY"))
 	if err != nil {
 		log.Printf("Failed to initialize AbuseIPDB client: %s", err)
 	}
 
 	// PowerDNS
-	dnsClient, err := dns.NewClient(*pdnsScheme, *pdnsHost, *pdnsPort, *pdnsKey)
+	dnsClient, err := dns.NewClient(os.Getenv("PDNS_API_SCHEME"),
+		os.Getenv("PDNS_API_HOST"),
+		os.Getenv("PDNS_API_PORT"),
+		os.Getenv("PDNS_API_KEY"),
+	)
 	if err != nil {
-		log.Printf("Failed to initalize PowerDNS client: %s", err)
+		log.Printf("Failed to initialize PowerDNS client: %s", err)
 	}
 
 	api := hbl.NewAPI(db, cfClient, abuseipdbClient, dnsClient)
 
 	go func() {
-		api.Start(*listenAddress, *listenPort)
+		if err := api.Start(os.Getenv("HBL_LISTEN_ADDRESS"), os.Getenv("HBL_LISTEN_PORT")); err != nil {
+			log.Fatalf("Failure: %s", err)
+		}
 	}()
 
 	signals := make(chan os.Signal, 1)

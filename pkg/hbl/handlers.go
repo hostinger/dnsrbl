@@ -23,12 +23,12 @@ func (api *API) handleAddressesPost(c echo.Context) error {
 		return c.JSON(422, ErrorResponse{Message: fmt.Sprintf("Failed to validate request body: %s", err)})
 	}
 	switch req.Action {
-	case "Block":
-		if err := api.Service.BlockAddress(address); err != nil {
+	case ActionBlock:
+		if err := api.Service.BlockAddress(&address); err != nil {
 			return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute Service.BlockAddress: %s", err)})
 		}
-	case "Allow":
-		if err := api.Service.AllowAddress(address); err != nil {
+	case ActionAllow:
+		if err := api.Service.AllowAddress(&address); err != nil {
 			return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute Service.AllowAddress: %s", err)})
 		}
 	}

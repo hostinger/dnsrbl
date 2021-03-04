@@ -4,11 +4,16 @@ import (
 	"time"
 )
 
+const (
+	ActionBlock = "Block"
+	ActionAllow = "Allow"
+)
+
 type ErrorResponse struct {
 	Message string
 }
 
-type AbuseIpDbMetadata struct {
+type AbuseIPDBMetadata struct {
 	IP                   string
 	ISP                  string
 	UsageType            string
@@ -29,5 +34,5 @@ type Address struct {
 }
 
 type AddressMetadata struct {
-	AbuseIpDbMetadata AbuseIpDbMetadata
+	AbuseIPDBMetadata AbuseIPDBMetadata
 }

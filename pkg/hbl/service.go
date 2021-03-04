@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	ErrAddressExists    = errors.New("The IP address exists.")
-	ErrAddressNotExists = errors.New("The IP address doesn't exists.")
-	ErrAddressIsAllowed = errors.New("The IP address exists and is marked as allowed.")
-	ErrAddressIsBlocked = errors.New("The IP address exists and is marked as blocked.")
+	ErrAddressExists    = errors.New("the IP address exists")
+	ErrAddressNotExists = errors.New("the IP address doesn't exist")
+	ErrAddressIsAllowed = errors.New("the IP address exists and is marked as allowed")
+	ErrAddressIsBlocked = errors.New("the IP address exists and is marked as blocked")
 )
 
 type Service struct {
@@ -39,32 +39,30 @@ func NewService(addressStore *AddressStore, metadataStore *MetadataStore,
 	}
 }
 
-func (s *Service) BlockAddress(address Address) error {
+func (s *Service) BlockAddress(address *Address) error {
 	a, err := s.AddressStore.GetOne(context.Background(), address.IP)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
 	if err == nil {
-		if a.Action == "Allow" {
+		if a.Action == ActionAllow {
 			return ErrAddressIsAllowed
 		}
-		if a.Action == "Block" {
+		if a.Action == ActionBlock {
 			return ErrAddressIsBlocked
 		}
 	}
-	if os.Getenv("ENVIRONMENT") != "DEV" {
-		if err := s.cfClient.Block(address.IP); err != nil {
-			return fmt.Errorf("Failed to execute CloudflareClient.Block(): %s", err)
-		}
+	if err = s.onBlock(address); err != nil {
+		return fmt.Errorf("failed to execute onBlock() actions: %s", err)
 	}
-	if err := s.dnsClient.Block(context.Background(), address.IP, "hostinger.rbl"); err != nil {
-		return fmt.Errorf("Failed to execute DNSClient.Block(): %s", err)
-	}
-	if err := s.AddressStore.Create(context.Background(), address); err != nil {
-		return fmt.Errorf("Failed to execute AddressStore.Create(): %s", err)
+	if err = s.AddressStore.Create(context.Background(), address); err != nil {
+		return fmt.Errorf("failed to execute AddressStore.Create(): %s", err)
 	}
 	report, err := s.abuseipdbClient.Check(address.IP)
 	if err != nil {
-		log.Printf("Failed to fetch AbuseIPDB metadata: %s", err)
+		log.Printf("failed to fetch AbuseIPDB metadata: %s", err)
 	}
-	metadata := AbuseIpDbMetadata{
+	metadata := AbuseIPDBMetadata{
 		IP:                   address.IP,
 		ISP:                  report.Data.Isp,
 		UsageType:            report.Data.UsageType,
@@ -74,19 +72,19 @@ func (s *Service) BlockAddress(address Address) error {
 		NumDistinctUsers:     report.Data.NumDistinctUsers,
 		AbuseConfidenceScore: report.Data.AbuseConfidenceScore,
 	}
-	if err := s.MetadataStore.Create(context.Background(), metadata); err != nil {
+	if err := s.MetadataStore.Create(context.Background(), &metadata); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) AllowAddress(address Address) error {
+func (s *Service) AllowAddress(address *Address) error {
 	a, err := s.AddressStore.GetOne(context.Background(), address.IP)
 	if err == nil {
-		if a.Action == "Allow" {
+		if a.Action == ActionAllow {
 			return ErrAddressIsAllowed
 		}
-		if a.Action == "Block" {
+		if a.Action == ActionBlock {
 			return ErrAddressIsBlocked
 		}
 	}
@@ -129,7 +127,7 @@ func (s *Service) GetAddress(ip string) (Address, error) {
 	if err != nil && err != sql.ErrNoRows {
 		return Address{}, err
 	}
-	address.Metadata.AbuseIpDbMetadata = metadata
+	address.Metadata.AbuseIPDBMetadata = metadata
 	return address, nil
 }
 
@@ -139,4 +137,16 @@ func (s *Service) GetAddresses() ([]Address, error) {
 		return nil, err
 	}
 	return addresses, nil
+}
+
+func (s *Service) onBlock(address *Address) error {
+	if os.Getenv("ENVIRONMENT") != "DEV" {
+		if err := s.cfClient.Block(address.IP); err != nil {
+			return fmt.Errorf("failed to execute CloudflareClient.Block(): %s", err)
+		}
+	}
+	if err := s.dnsClient.Block(context.Background(), address.IP, "hostinger.rbl"); err != nil {
+		return fmt.Errorf("failed to execute DNSClient.Block(): %s", err)
+	}
+	return nil
 }

@@ -9,29 +9,28 @@ import (
 	"time"
 )
 
-var baseURL = "https://api.abuseipdb.com/api/v2"
-
 type Report struct {
 	Data struct {
+		Hostnames            []interface{} `json:"hostnames"`
 		IPAddress            string        `json:"ipAddress"`
-		IsPublic             bool          `json:"isPublic"`
-		IPVersion            int           `json:"ipVersion"`
-		IsWhitelisted        bool          `json:"isWhitelisted"`
-		AbuseConfidenceScore int           `json:"abuseConfidenceScore"`
 		CountryCode          string        `json:"countryCode"`
 		UsageType            string        `json:"usageType"`
 		Isp                  string        `json:"isp"`
 		Domain               string        `json:"domain"`
-		Hostnames            []interface{} `json:"hostnames"`
+		IPVersion            int           `json:"ipVersion"`
+		AbuseConfidenceScore int           `json:"abuseConfidenceScore"`
 		TotalReports         int           `json:"totalReports"`
 		NumDistinctUsers     int           `json:"numDistinctUsers"`
 		LastReportedAt       *time.Time    `json:"lastReportedAt"`
+		IsWhitelisted        bool          `json:"isWhitelisted"`
+		IsPublic             bool          `json:"isPublic"`
 	} `json:"data"`
 }
 
 type Client struct {
-	Client *http.Client
-	Key    string
+	Client  *http.Client
+	BaseURL string
+	Key     string
 }
 
 func NewClient(key string) (*Client, error) {
@@ -39,16 +38,17 @@ func NewClient(key string) (*Client, error) {
 		Client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		Key: key,
+		BaseURL: "https://api.abuseipdb.com/api/v2",
+		Key:     key,
 	}, nil
 }
 
 func (c *Client) Check(ip string) (Report, error) {
 	if net.ParseIP(ip) == nil {
-		return Report{}, fmt.Errorf("Argument must be a valid IP address.")
+		return Report{}, fmt.Errorf("argument must be a valid IP address")
 	}
 
-	uri := fmt.Sprintf("%s/check", baseURL)
+	uri := fmt.Sprintf("%s/check", c.BaseURL)
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return Report{}, err
@@ -69,7 +69,7 @@ func (c *Client) Check(ip string) (Report, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return Report{}, fmt.Errorf("Failure from AbuseIPDB API: %s", body)
+		return Report{}, fmt.Errorf("failure from AbuseIPDB API: %s", string(body))
 	}
 
 	var report Report
