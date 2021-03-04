@@ -1,3 +1,0 @@
-expire_ttl: 24h
-allow_list:
-  - 127.0.0.1/32

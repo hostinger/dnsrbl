@@ -4,79 +4,139 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
-	"net"
+	"os"
 
 	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
 	"github.com/hostinger/dnsrbl/pkg/cloudflare"
+	"github.com/hostinger/dnsrbl/pkg/dns"
+)
+
+var (
+	ErrAddressExists    = errors.New("The IP address exists.")
+	ErrAddressNotExists = errors.New("The IP address doesn't exists.")
+	ErrAddressIsAllowed = errors.New("The IP address exists and is marked as allowed.")
+	ErrAddressIsBlocked = errors.New("The IP address exists and is marked as blocked.")
 )
 
 type Service struct {
 	abuseipdbClient *abuseipdb.Client
+	dnsClient       *dns.Client
 	cfClient        *cloudflare.Client
-	Config          *Config
-	Store           *Store
+	AddressStore    *AddressStore
+	MetadataStore   *MetadataStore
 }
 
-func NewService(cfg *Config, store *Store,
-	cfClient *cloudflare.Client, abuseipdbClient *abuseipdb.Client) *Service {
+func NewService(addressStore *AddressStore, metadataStore *MetadataStore,
+	cfClient *cloudflare.Client, abuseipdbClient *abuseipdb.Client, dnsClient *dns.Client) *Service {
 	return &Service{
 		abuseipdbClient: abuseipdbClient,
+		MetadataStore:   metadataStore,
+		AddressStore:    addressStore,
+		dnsClient:       dnsClient,
 		cfClient:        cfClient,
-		Store:           store,
-		Config:          cfg,
 	}
 }
 
 func (s *Service) BlockAddress(address Address) error {
-	if s.IsAddressInAllowList(address.IP) {
-		return errors.New("That IP address is in allow list.")
+	a, err := s.AddressStore.GetOne(context.Background(), address.IP)
+	if err == nil {
+		if a.Action == "Allow" {
+			return ErrAddressIsAllowed
+		}
+		if a.Action == "Block" {
+			return ErrAddressIsBlocked
+		}
 	}
-	if err := s.Store.CreateAddress(context.Background(), address); err != nil {
+	if os.Getenv("ENVIRONMENT") != "DEV" {
+		if err := s.cfClient.Block(address.IP); err != nil {
+			return fmt.Errorf("Failed to execute CloudflareClient.Block(): %s", err)
+		}
+	}
+	if err := s.dnsClient.Block(context.Background(), address.IP, "hostinger.rbl"); err != nil {
+		return fmt.Errorf("Failed to execute DNSClient.Block(): %s", err)
+	}
+	if err := s.AddressStore.Create(context.Background(), address); err != nil {
+		return fmt.Errorf("Failed to execute AddressStore.Create(): %s", err)
+	}
+	report, err := s.abuseipdbClient.Check(address.IP)
+	if err != nil {
+		log.Printf("Failed to fetch AbuseIPDB metadata: %s", err)
+	}
+	metadata := AbuseIpDbMetadata{
+		IP:                   address.IP,
+		ISP:                  report.Data.Isp,
+		UsageType:            report.Data.UsageType,
+		CountryCode:          report.Data.CountryCode,
+		TotalReports:         report.Data.TotalReports,
+		LastReportedAt:       report.Data.LastReportedAt,
+		NumDistinctUsers:     report.Data.NumDistinctUsers,
+		AbuseConfidenceScore: report.Data.AbuseConfidenceScore,
+	}
+	if err := s.MetadataStore.Create(context.Background(), metadata); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) UnblockAddress(ip string) error {
-	_, err := s.GetAddress(ip)
+func (s *Service) AllowAddress(address Address) error {
+	a, err := s.AddressStore.GetOne(context.Background(), address.IP)
+	if err == nil {
+		if a.Action == "Allow" {
+			return ErrAddressIsAllowed
+		}
+		if a.Action == "Block" {
+			return ErrAddressIsBlocked
+		}
+	}
+	if err := s.AddressStore.Create(context.Background(), address); err != nil {
+		return fmt.Errorf("Failed to execute AddressStore.Create(): %s", err)
+	}
+	return nil
+}
+
+func (s *Service) DeleteAddress(ip string) error {
+	a, err := s.AddressStore.GetOne(context.Background(), ip)
 	if err != nil && err == sql.ErrNoRows {
-		return errors.New("That IP address isn't blocked.")
+		return ErrAddressNotExists
 	}
-	if err := s.Store.DeleteAddress(context.Background(), ip); err != nil {
-		return err
+	if a.Action == "Block" {
+		if os.Getenv("ENVIRONMENT") != "DEV" {
+			if err := s.cfClient.Unblock(ip); err != nil {
+				return fmt.Errorf("Failed to execute CloudflareClient.Unblock(): %s", err)
+			}
+		}
+		if err := s.dnsClient.Unblock(context.Background(), ip, "hostinger.rbl"); err != nil {
+			return fmt.Errorf("Failed to execute DNSClient.Unblock(): %s", err)
+		}
+		if err := s.MetadataStore.Delete(context.Background(), ip); err != nil {
+			return fmt.Errorf("Failed to execute MetadataStore.Delete(): %s", err)
+		}
 	}
-	if err := s.cfClient.UnblockIPAddress(ip); err != nil {
-		log.Printf("Failed to execute UnblockIPAddressInCloudflare: %s", err)
+	if err := s.AddressStore.Delete(context.Background(), ip); err != nil {
+		return fmt.Errorf("Failed to execute AddressStore.Delete(): %s", err)
 	}
 	return nil
 }
 
 func (s *Service) GetAddress(ip string) (Address, error) {
-	address, err := s.Store.GetAddress(context.Background(), ip)
-	if err != nil {
+	address, err := s.AddressStore.GetOne(context.Background(), ip)
+	if err != nil && err == sql.ErrNoRows {
+		return Address{}, ErrAddressNotExists
+	}
+	metadata, err := s.MetadataStore.GetOne(context.Background(), ip)
+	if err != nil && err != sql.ErrNoRows {
 		return Address{}, err
 	}
+	address.Metadata.AbuseIpDbMetadata = metadata
 	return address, nil
 }
 
 func (s *Service) GetAddresses() ([]Address, error) {
-	addresses, err := s.Store.GetAddresses(context.Background())
+	addresses, err := s.AddressStore.GetAll(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	return addresses, nil
-}
-
-func (s *Service) IsAddressInAllowList(ip string) bool {
-	if net.ParseIP(ip) == nil {
-		return false
-	}
-	for _, item := range s.Config.AllowList {
-		_, network, _ := net.ParseCIDR(item)
-		if network.Contains(net.ParseIP(ip)) {
-			return true
-		}
-	}
-	return false
 }

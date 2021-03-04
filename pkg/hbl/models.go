@@ -20,13 +20,12 @@ type AbuseIpDbMetadata struct {
 }
 
 type Address struct {
-	IP                  string
-	Author              string
-	Comment             string
-	IsBlockedPDNS       bool
-	IsBlockedCloudflare bool
-	CreatedAt           time.Time
-	Metadata            AddressMetadata
+	IP        string
+	Author    string
+	Action    string
+	Comment   string
+	CreatedAt time.Time
+	Metadata  AddressMetadata
 }
 
 type AddressMetadata struct {

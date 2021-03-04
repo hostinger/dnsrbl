@@ -28,7 +28,7 @@ func NewClient(accountID string, email string, key string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) BlockIPAddress(ip string) error {
+func (c *Client) Block(ip string) error {
 	if net.ParseIP(ip) == nil {
 		return fmt.Errorf("Address '%s' is not a valid IP address.", ip)
 	}
@@ -47,7 +47,7 @@ func (c *Client) BlockIPAddress(ip string) error {
 	return nil
 }
 
-func (c *Client) UnblockIPAddress(ip string) error {
+func (c *Client) Unblock(ip string) error {
 	if net.ParseIP(ip) == nil {
 		return fmt.Errorf("Address '%s' is not a valid IP address.", ip)
 	}

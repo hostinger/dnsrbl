@@ -8,7 +8,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./database/database.sql:/docker-entrypoint-initdb.d/database.sql
+      - ./config/database.sql:/docker-entrypoint-initdb.d/database.sql
     environment:
       - MYSQL_ROOT_PASSWORD=Smmsfnu3u0
       - MYSQL_DATABASE=hbl
@@ -45,7 +45,13 @@ services:
         - "9040:9040"
     links:
       - hbl-mariadb:mysql
+      - hbl-pdns:pdns
     environment:
+      - ENVIRONMENT=DEV
+      - PDNS_API_SCHEME=http
+      - PDNS_API_HOST=hbl-pdns
+      - PDNS_API_PORT=8081
+      - PDNS_API_KEY=pdns_api_key
       - HBL_LISTEN_ADDRESS=0.0.0.0
       - HBL_LISTEN_PORT=9040
       - HBL_MYSQL_USERNAME=hbl
