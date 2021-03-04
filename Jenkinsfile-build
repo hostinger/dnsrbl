@@ -1,0 +1,26 @@
+#!groovy​
+
+pipeline {
+  options {
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  agent {
+    label 'docker'
+  }
+
+  environment {
+    PROJECT = env.GIT_URL.replaceFirst(/^.*\/([^\/]+?).git$/, '$1')
+    TAG     = sh(script: "git log --pretty=format:'%h' -n 1", returnStdout: true).trim()
+  }
+
+  stages {
+    stage ('Build and push image') {
+      steps {
+        sh "/bin/docker build -t eu.gcr.io/hostinger-systems/${env.PROJECT}:${env.TAG} ."
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/${env.PROJECT}:${env.TAG}"
+      }
+    }
+  }
+}
