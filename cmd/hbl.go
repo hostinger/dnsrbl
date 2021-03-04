@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -49,9 +50,11 @@ func main() {
 	flag.Parse()
 
 	// Database
-	db, err := hbl.InitDB(*mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase, time.Second*120)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	db, err := hbl.InitDB(ctx, *mysqlUsername, *mysqlPassword, *mysqlHost, *mysqlPort, *mysqlDatabase)
 	if err != nil {
-		log.Fatalf("Failed to initialize connection to the database: %s", err)
+		log.Fatalf("Failed to establish connection to the database: %s", err)
 	}
 
 	// Config

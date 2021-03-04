@@ -39,20 +39,22 @@ func NewAPI(cfg *Config, db *sql.DB,
 	service := NewService(cfg, store, cfClient, abuseipdbClient)
 
 	return &API{
-		Service:  service,
-		Server:   server,
-		Config:   cfg,
-		Database: db,
+		abuseipdbClient: abuseipdbClient,
+		cfClient:        cfClient,
+		Service:         service,
+		Server:          server,
+		Config:          cfg,
+		Database:        db,
 	}
 }
 
 func (api *API) init() {
 	// Blocklist Routes
 	{
-		api.Server.Add("DELETE", "/api/v1/blocklist/:ip", api.handleBlocklistDelete)
-		api.Server.Add("GET", "/api/v1/blocklist/:ip", api.handleBlocklistGet)
-		api.Server.Add("GET", "/api/v1/blocklist", api.handleBlocklistGetAll)
-		api.Server.Add("POST", "/api/v1/blocklist", api.handleBlocklistPost)
+		api.Server.Add("GET", "/api/v1/list", api.handleListAll)
+		api.Server.Add("DELETE", "/api/v1/unblock/:ip", api.handleUnblock)
+		api.Server.Add("GET", "/api/v1/list/:ip", api.handleListOne)
+		api.Server.Add("POST", "/api/v1/block", api.handleBlock)
 	}
 	// Common Routes
 	{
