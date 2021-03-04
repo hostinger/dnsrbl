@@ -18,8 +18,8 @@ pipeline {
   stages {
     stage ('Build and push image') {
       steps {
-        sh "/bin/docker build -t eu.gcr.io/hostinger-systems/${env.PROJECT}:${env.TAG} ."
-        sh "/bin/docker push eu.gcr.io/hostinger-systems/${env.PROJECT}:${env.TAG}"
+        sh "/bin/docker build -t eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG} ."
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
       }
     }
   }
