@@ -11,6 +11,7 @@ import (
 
 	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
 	"github.com/hostinger/dnsrbl/pkg/cloudflare"
+	"github.com/hostinger/dnsrbl/pkg/dns"
 	"github.com/hostinger/dnsrbl/pkg/hbl"
 )
 
@@ -38,6 +39,13 @@ var (
 )
 
 var (
+	pdnsScheme = flag.String("pdns.scheme", os.Getenv("PDNS_API_SCHEME"), "PowerDNS API Scheme.")
+	pdnsHost   = flag.String("pdns.host", os.Getenv("PDNS_API_HOST"), "PowerDNS API Host.")
+	pdnsPort   = flag.String("pdns.port", os.Getenv("PDNS_API_PORT"), "PowerDNS API Port.")
+	pdnsKey    = flag.String("pdns.key", os.Getenv("PDNS_API_KEY"), "PowerDNS API Key.")
+)
+
+var (
 	cfgFile = flag.String("config.file", "config.yml", "Path to the configuration file.")
 )
 
@@ -57,15 +65,6 @@ func main() {
 		log.Fatalf("Failed to establish connection to the database: %s", err)
 	}
 
-	// Config
-	config, err := hbl.NewConfigFromFile(*cfgFile)
-	if err != nil {
-		log.Fatalf("Failed to load configuration file: %s", err)
-	}
-	if err := config.Validate(); err != nil {
-		log.Fatalf("Failed to validate configuration file: %s", err)
-	}
-
 	// Cloudflare
 	cfClient, err := cloudflare.NewClient(*cloudflareAccount, *cloudflareEmail, *cloudflareKey)
 	if err != nil {
@@ -78,7 +77,13 @@ func main() {
 		log.Printf("Failed to initialize AbuseIPDB client: %s", err)
 	}
 
-	api := hbl.NewAPI(config, db, cfClient, abuseipdbClient)
+	// PowerDNS
+	dnsClient, err := dns.NewClient(*pdnsScheme, *pdnsHost, *pdnsPort, *pdnsKey)
+	if err != nil {
+		log.Printf("Failed to initalize PowerDNS client: %s", err)
+	}
+
+	api := hbl.NewAPI(db, cfClient, abuseipdbClient, dnsClient)
 
 	go func() {
 		api.Start(*listenAddress, *listenPort)

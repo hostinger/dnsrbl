@@ -9,11 +9,10 @@ import (
 )
 
 type BlockRequest struct {
-	IP              string
-	Author          string
-	Comment         string
-	BlockPDNS       *bool
-	BlockCloudflare *bool
+	IP      string
+	Author  string
+	Action  string
+	Comment string
 }
 
 func (m *BlockRequest) Bind(c echo.Context, a *Address) error {
@@ -24,10 +23,9 @@ func (m *BlockRequest) Bind(c echo.Context, a *Address) error {
 		return err
 	}
 	a.IP = m.IP
+	a.Action = m.Action
 	a.Author = m.Author
 	a.Comment = m.Comment
-	a.IsBlockedCloudflare = *m.BlockCloudflare
-	a.IsBlockedPDNS = *m.BlockPDNS
 	return nil
 }
 
@@ -35,14 +33,17 @@ func (m *BlockRequest) Validate() error {
 	if net.ParseIP(m.IP) == nil {
 		return errors.New("Field 'IP' must be a valid IP address.")
 	}
+	if len(strings.TrimSpace(m.Author)) == 0 {
+		return errors.New("Field 'Author' must not be empty.")
+	}
 	if len(strings.TrimSpace(m.Comment)) == 0 {
 		return errors.New("Field 'Comment' must not be empty.")
 	}
-	if m.BlockCloudflare == nil {
-		return errors.New("Field 'BlockCloudflare' must not be empty.")
+	if len(strings.TrimSpace(m.Action)) == 0 {
+		return errors.New("Field 'Action' must not be empty.")
 	}
-	if m.BlockPDNS == nil {
-		return errors.New("Field 'BlockPDNS' must not be empty.")
+	if m.Action != "Block" && m.Action != "Allow" {
+		return errors.New("Field 'Action' must be valid.")
 	}
 	return nil
 }
