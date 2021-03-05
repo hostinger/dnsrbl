@@ -24,8 +24,8 @@ pipeline {
     }
     stage ('Cleanup images') {
       steps {
-        sh "/bin/docker rmi gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
-        sh "/bin/docker rmi gcr.io/hostinger-systems/hostinger-hbl:latest"
+        sh "/bin/docker rmi eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
+        sh "/bin/docker rmi eu.gcr.io/hostinger-systems/hostinger-hbl:latest"
       }
     }
   }
