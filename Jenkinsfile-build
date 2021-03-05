@@ -22,6 +22,12 @@ pipeline {
         sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:latest"
       }
     }
+    stage ('Deploy') {
+      steps {
+        sh "/usr/local/bin/argocd app list -l argocd.argoproj.io/service=hbl-stage -o name | xargs -I {arg} argocd app set {arg} -p global.tag=${env.TAG}"
+        sh "/usr/local/bin/argocd app sync -l argocd.argoproj.io/service=hbl-stage"
+      }
+    }
     stage ('Cleanup images') {
       steps {
         sh "/bin/docker rmi eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
