@@ -1,4 +1,5 @@
 # Hostinger Block List API
-Description comming soon...
-Lint via Jenkins
-Built from master
+Description comming soon...  
+Lint via Jenkins  
+Built from master  
+Using argocd  
