@@ -17,8 +17,15 @@ pipeline {
   stages {
     stage ('Build and push image') {
       steps {
-        sh "/bin/docker build -t eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG} ."
+        sh "/bin/docker build -t eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG} -t eu.gcr.io/hostinger-systems/hostinger-hbl:latest ."
         sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:latest"
+      }
+    }
+    stage ('Cleanup images') {
+      steps {
+        sh "/bin/docker rmi gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
+        sh "/bin/docker rmi gcr.io/hostinger-systems/hostinger-hbl:latest"
       }
     }
   }
