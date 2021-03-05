@@ -38,9 +38,7 @@ services:
 
   hbl-api:
     container_name: hbl-api
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: eu.gcr.io/hostinger-systems/hostinger-hbl:latest
     ports:
         - "9040:9040"
     links:
