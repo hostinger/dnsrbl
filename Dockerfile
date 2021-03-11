@@ -4,9 +4,9 @@ RUN mkdir /api
 
 ADD . /api
 
-WORKDIR /api/cmd
+WORKDIR /api/cmd/hbl
 
 RUN go mod download && \
     go build -o hbl .
 
-CMD ["/api/cmd/hbl"]
+CMD ["/api/cmd/hbl/hbl"]

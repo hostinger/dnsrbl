@@ -1,98 +1,149 @@
 package hbl
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"net"
 
 	"github.com/labstack/echo/v4"
 )
 
-// @Summary     Block an IP address
-// @Description Block an IP address.
+type Error struct {
+	Message string `json:"message"`
+}
+
+// @Summary     Block or Allow an IP address.
+// @Description Use this endpoint to Block or Allow an IP address depending on Action argument in body.
 // @Produce     json
 // @Accept      json
 // @Tags        Addresses
 // @Success     200
-// @Failure     422 {object} ErrorResponse
-// @Failure     500 {object} ErrorResponse
-// @Router      /blocklist [POST]
+// @Failure     422 {object} Error
+// @Failure     500 {object} Error
+// @Router      /addresses [POST]
 func (api *API) handleAddressesPost(c echo.Context) error {
 	var req BlockRequest
 	var address Address
 	if err := req.Bind(c, &address); err != nil {
-		return c.JSON(422, ErrorResponse{Message: fmt.Sprintf("Failed to validate request body: %s", err)})
+		return echo.NewHTTPError(422, fmt.Sprintf("Failed to validate request body: %s", err))
+	}
+	a, err := api.Service.GetOne(context.Background(), address.IP)
+	if err != nil && err != sql.ErrNoRows {
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+	}
+	if a != nil {
+		return echo.NewHTTPError(500, "Address already exists, delete it before other actions")
 	}
 	switch req.Action {
-	case ActionBlock:
-		if err := api.Service.BlockAddress(&address); err != nil {
-			return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute Service.BlockAddress: %s", err)})
+	case "Block":
+		if err := api.Service.Block(context.Background(), &address); err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
 		}
-	case ActionAllow:
-		if err := api.Service.AllowAddress(&address); err != nil {
-			return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute Service.AllowAddress: %s", err)})
+	case "Allow":
+		if err := api.Service.Allow(context.Background(), &address); err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
 		}
 	}
 	return c.JSON(200, nil)
 }
 
-// @Summary     Get a blocked IP address.
-// @Description Get a blocked IP address.
+// @Summary     Delete an IP address.
+// @Description Use this endpoint to delete an already blocked or allowed IP address.
 // @Produce     json
 // @Accept      json
 // @Tags        Addresses
-// @Param 		ip path string true "Valid IP address to search for."
 // @Success     200
-// @Failure     422 {object} ErrorResponse
-// @Failure     500 {object} ErrorResponse
-// @Router      /blocklist/{ip} [GET]
+// @Param 		ip path string true "IP Address"
+// @Failure     422 {object} Error
+// @Failure     500 {object} Error
+// @Router      /addresses/{ip} [DELETE]
+func (api *API) handleAddressesDelete(c echo.Context) error {
+	ip := c.Param("ip")
+	if net.ParseIP(ip) == nil {
+		return echo.NewHTTPError(422, "Param 'IP' must be a valid IP address")
+	}
+	address, err := api.Service.GetOne(context.Background(), ip)
+	if err != nil && err == sql.ErrNoRows {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(404, "Address doesn't exist")
+		}
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+	}
+	if address.Action == "Block" {
+		if err := api.Service.Unblock(context.Background(), address); err != nil {
+			return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+		}
+	}
+	if err := api.Service.Delete(context.Background(), ip); err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+	}
+	return c.JSON(200, nil)
+}
+
+// @Summary     Get an IP address.
+// @Description Use this endpoint to fetch details about an already blocked or allowed IP address.
+// @Produce     json
+// @Accept      json
+// @Tags        Addresses
+// @Success     200 {object} Address
+// @Param 		ip path string true "IP Address"
+// @Failure     422 {object} Error
+// @Failure     500 {object} Error
+// @Router      /addresses/{ip} [GET]
 func (api *API) handleAddressesGetOne(c echo.Context) error {
 	ip := c.Param("ip")
 	if net.ParseIP(ip) == nil {
-		return c.JSON(422, ErrorResponse{Message: "Param 'ip' must be a valid IP address."})
+		return echo.NewHTTPError(422, "Param 'IP' must be a valid IP address")
 	}
-	address, err := api.Service.GetAddress(ip)
+	address, err := api.Service.GetOne(context.Background(), ip)
 	if err != nil {
-		return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute Service.GetAddress: %s", err)})
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(404, "Address doesn't exist")
+		}
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
 	}
 	return c.JSON(200, address)
 }
 
-// @Summary     Delete a blocked IP address.
-// @Description Delete a blocked IP address.
-// @Produce     json
-// @Accept      json
-// @Tags        Addresses
-// @Param 		ip path string true "Valid IP address to search for."
-// @Success     200
-// @Failure     422 {object} ErrorResponse
-// @Failure     500 {object} ErrorResponse
-// @Router      /blocklist/{ip} [DELETE]
-func (api *API) handleAddressesDelete(c echo.Context) error {
-	ip := c.Param("ip")
-	if net.ParseIP(ip) == nil {
-		return c.JSON(422, ErrorResponse{Message: "Param 'ip' must be a valid IP address."})
-	}
-	if err := api.Service.DeleteAddress(ip); err != nil {
-		return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute Service.DeleteAddress: %s", err)})
-	}
-	return c.JSON(200, nil)
-}
-
-// @Summary     Get all blocked IP addresses.
-// @Description Get all blocked IP addresses.
+// @Summary     Get all IP addresses.
+// @Description Use this endpoint to fetch details about all already blocked or allowed IP addresses.
 // @Produce     json
 // @Accept      json
 // @Tags        Addresses
 // @Success     200 {array} Address
-// @Failure     422 {object} ErrorResponse
-// @Failure     500 {object} ErrorResponse
-// @Router      /blocklist/{ip} [DELETE]
+// @Failure     422 {object} Error
+// @Failure     500 {object} Error
+// @Router      /addresses [GET]
 func (api *API) handleAddressesGetAll(c echo.Context) error {
-	addresses, err := api.Service.GetAddresses()
+	addresses, err := api.Service.GetAll(context.Background())
 	if err != nil {
-		return c.JSON(500, ErrorResponse{Message: fmt.Sprintf("Failed to execute GetAddresses: %s", err)})
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
 	}
 	return c.JSON(200, addresses)
+}
+
+// @Summary     Get an IP address.
+// @Description Use this endpoint to fetch details about an already blocked or allowed IP address.
+// @Produce     json
+// @Accept      json
+// @Tags        Addresses
+// @Success     200 {object} Address
+// @Param 		name path string true "Name of the Checker"
+// @Param 		ip path string true "IP Address"
+// @Failure     422 {object} Error
+// @Failure     500 {object} Error
+// @Router      /addresses/check/{name}/{ip} [GET]
+func (api *API) handleAddressesCheck(c echo.Context) error {
+	name, ip := c.Param("name"), c.Param("ip")
+	if net.ParseIP(ip) == nil {
+		return echo.NewHTTPError(422, "Param 'IP' must be a valid IP address")
+	}
+	result, err := api.Service.Check(context.Background(), name, ip)
+	if err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+	}
+	return c.JSON(200, result)
 }
 
 func (api *API) handleHealth(c echo.Context) error {

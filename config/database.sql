@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `addresses` (
 );
 
 CREATE TABLE IF NOT EXISTS `abuseipdb_metadata` (
-  `ip` VARBINARY(16) NOT NULL,
+  `ip` VARBINARY(16),
   `country_code` VARCHAR(50),
   `usage_type` VARCHAR(50),
   `isp` VARCHAR(50),

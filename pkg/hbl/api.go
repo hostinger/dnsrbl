@@ -6,68 +6,44 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	_ "github.com/hostinger/dnsrbl/docs" // Needed for Swagger
-	"github.com/hostinger/dnsrbl/pkg/abuseipdb"
-	"github.com/hostinger/dnsrbl/pkg/cloudflare"
-	"github.com/hostinger/dnsrbl/pkg/dns"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 type API struct {
-	Server          *echo.Echo
-	Database        *sql.DB
-	Service         *Service
-	cfClient        *cloudflare.Client
-	abuseipdbClient *abuseipdb.Client
-	dnsClient       *dns.Client
+	Server  *echo.Echo
+	Service Service
 }
 
-func NewAPI(db *sql.DB,
-	cfClient *cloudflare.Client, abuseipdbClient *abuseipdb.Client, dnsClient *dns.Client) *API {
+func NewAPI(db *sql.DB) *API {
 	server := echo.New()
-
-	server.HideBanner = true
 	server.HidePort = true
+	server.HideBanner = true
 
 	server.Use(middleware.Logger())
 	server.Use(middleware.Recover())
+	server.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
+		AuthScheme: "",
+		KeyLookup:  "header:X-API-Key",
+		Validator: func(s string, c echo.Context) (bool, error) {
+			return s == os.Getenv("HBL_API_TOKEN"), nil
+		},
+	}))
 
-	service := NewService(
-		NewAddressStore(db),
-		NewMetadataStore(db),
-		cfClient,
-		abuseipdbClient,
-		dnsClient,
-	)
+	service := NewService(NewMySQLRepository(db))
 
 	return &API{
-		abuseipdbClient: abuseipdbClient,
-		cfClient:        cfClient,
-		Service:         service,
-		Server:          server,
-		Database:        db,
-		dnsClient:       dnsClient,
+		Server:  server,
+		Service: service,
 	}
 }
 
-func (api *API) init() {
-	api.Server.Add("GET", "/api/v1/addresses", api.handleAddressesGetAll)
-	api.Server.Add("GET", "/api/v1/addresses/:ip", api.handleAddressesGetOne)
-	api.Server.Add("DELETE", "/api/v1/addresses/:ip", api.handleAddressesDelete)
-	api.Server.Add("POST", "/api/v1/addresses", api.handleAddressesPost)
-
-	api.Server.Add("GET", "/version", api.handleVersion)
-	api.Server.Add("GET", "/health", api.handleHealth)
-
-	api.Server.Add("GET", "/swagger/*", echoSwagger.WrapHandler)
-}
-
 func (api *API) Start(host, port string) error {
-	api.init()
+	api.SetupRoutes()
 	listenAddress := fmt.Sprintf("%s:%s", host, port)
 	log.Printf("Listening on %s", listenAddress)
 	if err := api.Server.Start(listenAddress); err != nil && err != http.ErrServerClosed {
