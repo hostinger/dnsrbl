@@ -28,10 +28,28 @@ func main() {
 		log.Printf("Database: %s", err)
 	}
 
-	checkers.Register(checkers.NewAbuseIPDBChecker(db))
-	endpoints.Register(endpoints.NewCloudflareEndpoint())
-	endpoints.Register(endpoints.NewPDNSEndpoint())
-	alerters.Register(alerters.NewSlackAlerter())
+	switch os.Getenv("ENVIRONMENT") {
+	case "PRODUCTION":
+		// Endpoints
+		endpoints.Register(endpoints.NewCloudflareEndpoint())
+		endpoints.Register(endpoints.NewPDNSEndpoint())
+		// Checkers
+		checkers.Register(checkers.NewAbuseIPDBChecker(db))
+		// Alerters
+		alerters.Register(alerters.NewSlackAlerter())
+	case "STAGING":
+		// Endpoints
+		endpoints.Register(endpoints.NewPDNSEndpoint())
+		// Checkers
+		checkers.Register(checkers.NewAbuseIPDBChecker(db))
+		// Alerters
+		alerters.Register(alerters.NewSlackAlerter())
+	default:
+		// Endpoints
+		endpoints.Register(endpoints.NewPDNSEndpoint())
+		// Checkers
+		checkers.Register(checkers.NewAbuseIPDBChecker(db))
+	}
 
 	api := hbl.NewAPI(db)
 
