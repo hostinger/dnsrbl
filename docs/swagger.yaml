@@ -1,15 +1,19 @@
 basePath: /api/v1
 definitions:
-  dnsrbl.Address:
+  hbl.Address:
     properties:
-      address:
+      action:
+        type: string
+      author:
         type: string
       comment:
         type: string
       createdAt:
         type: string
+      ip:
+        type: string
     type: object
-  dnsrbl.ErrorResponse:
+  hbl.Error:
     properties:
       message:
         type: string
@@ -21,17 +25,12 @@ info:
   title: Hostinger Block List API
   version: "1.0"
 paths:
-  /blocklist:
+  /addresses:
     get:
       consumes:
       - application/json
-      description: Get all IP addresses
-      parameters:
-      - description: The IP address
-        in: path
-        name: address
-        required: true
-        type: string
+      description: Use this endpoint to fetch details about all already blocked or
+        allowed IP addresses.
       produces:
       - application/json
       responses:
@@ -39,23 +38,24 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dnsrbl.Address'
+              $ref: '#/definitions/hbl.Address'
             type: array
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
+            $ref: '#/definitions/hbl.Error'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
-      summary: Get all IP addresses
+            $ref: '#/definitions/hbl.Error'
+      summary: Get all IP addresses.
       tags:
       - Addresses
     post:
       consumes:
       - application/json
-      description: Block an IP address
+      description: Use this endpoint to Block or Allow an IP address depending on
+        Action argument in body.
       produces:
       - application/json
       responses:
@@ -64,23 +64,23 @@ paths:
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
+            $ref: '#/definitions/hbl.Error'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
-      summary: Block an IP addresss
+            $ref: '#/definitions/hbl.Error'
+      summary: Block or Allow an IP address.
       tags:
       - Addresses
-  /blocklist/{address}:
+  /addresses/{ip}:
     delete:
       consumes:
       - application/json
-      description: Unblock an IP address
+      description: Use this endpoint to delete an already blocked or allowed IP address.
       parameters:
-      - description: The IP address
+      - description: IP Address
         in: path
-        name: address
+        name: ip
         required: true
         type: string
       produces:
@@ -91,22 +91,23 @@ paths:
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
+            $ref: '#/definitions/hbl.Error'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
-      summary: Unblock an IP addresss
+            $ref: '#/definitions/hbl.Error'
+      summary: Delete an IP address.
       tags:
       - Addresses
     get:
       consumes:
       - application/json
-      description: Get an IP address
+      description: Use this endpoint to fetch details about an already blocked or
+        allowed IP address.
       parameters:
-      - description: The IP address
+      - description: IP Address
         in: path
-        name: address
+        name: ip
         required: true
         type: string
       produces:
@@ -115,16 +116,51 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dnsrbl.Address'
+            $ref: '#/definitions/hbl.Address'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
+            $ref: '#/definitions/hbl.Error'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dnsrbl.ErrorResponse'
-      summary: Get an IP address
+            $ref: '#/definitions/hbl.Error'
+      summary: Get an IP address.
+      tags:
+      - Addresses
+  /addresses/check/{name}/{ip}:
+    get:
+      consumes:
+      - application/json
+      description: Use this endpoint to fetch details about an already blocked or
+        allowed IP address.
+      parameters:
+      - description: Name of the Checker
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: IP Address
+        in: path
+        name: ip
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/hbl.Address'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/hbl.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/hbl.Error'
+      summary: Get an IP address.
       tags:
       - Addresses
 swagger: "2.0"

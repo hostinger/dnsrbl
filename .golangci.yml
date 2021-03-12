@@ -165,7 +165,7 @@ linters:
     - interfacer
     - unconvert
     - dupl
-    - goconst
+    # - goconst
     - gocyclo
     - gofmt
     - goimports
@@ -176,7 +176,7 @@ linters:
     - nakedret
     - scopelint
     - gocritic
-    - gochecknoinits
-    - gochecknoglobals
+    # - gochecknoinits
+    # - gochecknoglobals
     - errcheck
   fast: false

@@ -38,28 +38,15 @@ services:
 
   hbl-api:
     container_name: hbl-api
-    image: eu.gcr.io/hostinger-systems/hostinger-hbl:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
         - "9040:9040"
     links:
       - hbl-mariadb:mysql
       - hbl-pdns:pdns
-    environment:
-      - ENVIRONMENT=DEV
-      - PDNS_API_SCHEME=http
-      - PDNS_API_HOST=hbl-pdns
-      - PDNS_API_PORT=8081
-      - PDNS_API_KEY=pdns_api_key
-      - HBL_LISTEN_ADDRESS=0.0.0.0
-      - HBL_LISTEN_PORT=9040
-      - HBL_MYSQL_USERNAME=hbl
-      - HBL_MYSQL_PASSWORD=testing123
-      - HBL_MYSQL_DATABASE=hbl
-      - HBL_MYSQL_HOST=mysql
-      - HBL_MYSQL_PORT=3306
-      - CF_API_EMAIL=someaddr@somedomain.com
-      - CF_API_KEY=somekey
-      - CF_API_ACCOUNT=someaccount
-      - ABUSEIPDB_API_KEY=adkey
+    env_file:
+      - .env
     depends_on:
       - hbl-mariadb

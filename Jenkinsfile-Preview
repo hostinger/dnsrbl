@@ -16,7 +16,7 @@ pipeline {
   }
 
   stages {
-    stage('Run lint on pull') {
+    stage('Lint') {
       steps {
         sh "docker run --rm -v ${workspace}:/app -w /app golangci/golangci-lint:v1.37.1 golangci-lint run -c .golangci.yml "
       }

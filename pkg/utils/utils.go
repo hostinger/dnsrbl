@@ -1,4 +1,4 @@
-package dnsutils
+package utils
 
 import (
 	"net"

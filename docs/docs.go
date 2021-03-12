@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"strings"
+	"text/template"
 
-	"github.com/alecthomas/template"
 	"github.com/swaggo/swag"
 )
 
@@ -23,9 +23,9 @@ var doc = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/blocklist": {
+        "/addresses": {
             "get": {
-                "description": "Get all IP addresses",
+                "description": "Use this endpoint to fetch details about all already blocked or allowed IP addresses.",
                 "consumes": [
                     "application/json"
                 ],
@@ -35,42 +35,33 @@ var doc = `{
                 "tags": [
                     "Addresses"
                 ],
-                "summary": "Get all IP addresses",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "The IP address",
-                        "name": "address",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Get all IP addresses.",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dnsrbl.Address"
+                                "$ref": "#/definitions/hbl.Address"
                             }
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     }
                 }
             },
             "post": {
-                "description": "Block an IP address",
+                "description": "Use this endpoint to Block or Allow an IP address depending on Action argument in body.",
                 "consumes": [
                     "application/json"
                 ],
@@ -80,7 +71,7 @@ var doc = `{
                 "tags": [
                     "Addresses"
                 ],
-                "summary": "Block an IP addresss",
+                "summary": "Block or Allow an IP address.",
                 "responses": {
                     "200": {
                         "description": ""
@@ -88,21 +79,21 @@ var doc = `{
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     }
                 }
             }
         },
-        "/blocklist/{address}": {
+        "/addresses/check/{name}/{ip}": {
             "get": {
-                "description": "Get an IP address",
+                "description": "Use this endpoint to fetch details about an already blocked or allowed IP address.",
                 "consumes": [
                     "application/json"
                 ],
@@ -112,12 +103,19 @@ var doc = `{
                 "tags": [
                     "Addresses"
                 ],
-                "summary": "Get an IP address",
+                "summary": "Get an IP address.",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "The IP address",
-                        "name": "address",
+                        "description": "Name of the Checker",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP Address",
+                        "name": "ip",
                         "in": "path",
                         "required": true
                     }
@@ -126,25 +124,27 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.Address"
+                            "$ref": "#/definitions/hbl.Address"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     }
                 }
-            },
-            "delete": {
-                "description": "Unblock an IP address",
+            }
+        },
+        "/addresses/{ip}": {
+            "get": {
+                "description": "Use this endpoint to fetch details about an already blocked or allowed IP address.",
                 "consumes": [
                     "application/json"
                 ],
@@ -154,12 +154,54 @@ var doc = `{
                 "tags": [
                     "Addresses"
                 ],
-                "summary": "Unblock an IP addresss",
+                "summary": "Get an IP address.",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "The IP address",
-                        "name": "address",
+                        "description": "IP Address",
+                        "name": "ip",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/hbl.Address"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/hbl.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/hbl.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Use this endpoint to delete an already blocked or allowed IP address.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Addresses"
+                ],
+                "summary": "Delete an IP address.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "IP Address",
+                        "name": "ip",
                         "in": "path",
                         "required": true
                     }
@@ -171,13 +213,13 @@ var doc = `{
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dnsrbl.ErrorResponse"
+                            "$ref": "#/definitions/hbl.Error"
                         }
                     }
                 }
@@ -185,10 +227,13 @@ var doc = `{
         }
     },
     "definitions": {
-        "dnsrbl.Address": {
+        "hbl.Address": {
             "type": "object",
             "properties": {
-                "address": {
+                "action": {
+                    "type": "string"
+                },
+                "author": {
                     "type": "string"
                 },
                 "comment": {
@@ -196,10 +241,13 @@ var doc = `{
                 },
                 "createdAt": {
                     "type": "string"
+                },
+                "ip": {
+                    "type": "string"
                 }
             }
         },
-        "dnsrbl.ErrorResponse": {
+        "hbl.Error": {
             "type": "object",
             "properties": {
                 "message": {
