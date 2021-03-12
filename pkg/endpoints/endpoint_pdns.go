@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env"
-	"github.com/hostinger/dnsrbl/pkg/utils"
+	"github.com/hostinger/hbl/pkg/utils"
 )
 
 type PDNSEndpoint struct {

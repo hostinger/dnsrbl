@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hostinger/dnsrbl/sdk"
+	"github.com/hostinger/hbl/sdk"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"

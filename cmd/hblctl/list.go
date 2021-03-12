@@ -9,7 +9,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/hostinger/dnsrbl/sdk"
+	"github.com/hostinger/hbl/sdk"
 	"github.com/spf13/cobra"
 )
 
