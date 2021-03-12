@@ -164,7 +164,7 @@ linters:
     - gosec
     - interfacer
     - unconvert
-    - dupl
+    # - dupl
     # - goconst
     - gocyclo
     - gofmt
