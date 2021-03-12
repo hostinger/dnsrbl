@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hostinger/dnsrbl/pkg/alerters"
-	"github.com/hostinger/dnsrbl/pkg/checkers"
-	"github.com/hostinger/dnsrbl/pkg/endpoints"
-	"github.com/hostinger/dnsrbl/pkg/hbl"
+	"github.com/hostinger/hbl/pkg/alerters"
+	"github.com/hostinger/hbl/pkg/checkers"
+	"github.com/hostinger/hbl/pkg/endpoints"
+	"github.com/hostinger/hbl/pkg/hbl"
 )
 
 // @title Hostinger Block List API

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/hostinger/dnsrbl/docs" // Needed for Swagger
+	_ "github.com/hostinger/hbl/docs" // Needed for Swagger
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"

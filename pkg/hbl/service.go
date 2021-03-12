@@ -3,9 +3,9 @@ package hbl
 import (
 	"context"
 
-	"github.com/hostinger/dnsrbl/pkg/alerters"
-	"github.com/hostinger/dnsrbl/pkg/checkers"
-	"github.com/hostinger/dnsrbl/pkg/endpoints"
+	"github.com/hostinger/hbl/pkg/alerters"
+	"github.com/hostinger/hbl/pkg/checkers"
+	"github.com/hostinger/hbl/pkg/endpoints"
 )
 
 type Service interface {
