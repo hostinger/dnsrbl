@@ -24,7 +24,7 @@ type Request struct {
 type Client interface {
 	Allow(ctx context.Context, ip, author, comment string) error
 	Block(ctx context.Context, ip, author, comment string) error
-	Unblock(ctx context.Context, ip, author, comment string) error
+	Delete(ctx context.Context, ip string) error
 }
 
 type client struct {
@@ -101,6 +101,16 @@ func (c *client) Block(ctx context.Context, ip, author, comment string) error {
 	return c.ExecuteAction(ctx, ip, "Block", author, comment)
 }
 
-func (c *client) Unblock(ctx context.Context, ip, author, comment string) error {
-	return c.ExecuteAction(ctx, ip, "Unblock", author, comment)
+func (c *client) Delete(ctx context.Context, ip string) error {
+	if net.ParseIP(ip) == nil {
+		return &net.ParseError{
+			Type: "IPv4 Address",
+			Text: ip,
+		}
+	}
+	_, err := c.Call(ctx, "DELETE", fmt.Sprintf("addresses/%s", ip), nil)
+	if err != nil {
+		return errors.Wrap(err, "Failed to execute DELETE request")
+	}
+	return nil
 }
