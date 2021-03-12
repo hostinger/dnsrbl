@@ -5,10 +5,19 @@
 Hostinger Block List microservice based on Golang Echo framework. Hostinger Block List serves as a single source of truth for all blocked IP addresses in Hostinger organization.
 
 # Table of contents
+- [Docs](#Docs)
 - [CLI](#CLI)
 - [SDK](#SDK)
 - [Contributing](#contributing)
 - [License](#license)
+
+# Docs
+For API documentation we use Swagger. You can access Swagger documentation upon launch at http://127.0.0.1:8080/swagger/index.html
+
+Upon API changes, a separate PR should be opened to update documentation. Documentation is automatically created with https://github.com/swaggo/swag
+```
+swag init -g cmd/hbl.go
+```
 
 # CLI
 There is a CLI application available, which helps interact with HBL API right from the terminal.
