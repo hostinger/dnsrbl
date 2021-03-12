@@ -14,16 +14,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Request struct {
-	IP      string
-	Action  string
-	Author  string
-	Comment string
+type Address struct {
+	IP        string
+	Action    string
+	Author    string
+	Comment   string
+	CreatedAt time.Time
 }
 
 type Client interface {
 	Allow(ctx context.Context, ip, author, comment string) error
 	Block(ctx context.Context, ip, author, comment string) error
+	GetOne(ctx context.Context, ip string) (*Address, error)
+	GetAll(ctx context.Context) ([]*Address, error)
 	Delete(ctx context.Context, ip string) error
 }
 
@@ -76,7 +79,7 @@ func (c *client) ExecuteAction(ctx context.Context, ip, action, author, comment 
 			Text: ip,
 		}
 	}
-	b := &Request{
+	b := &Address{
 		IP:      ip,
 		Action:  action,
 		Author:  author,
@@ -113,4 +116,34 @@ func (c *client) Delete(ctx context.Context, ip string) error {
 		return errors.Wrap(err, "Failed to execute DELETE request")
 	}
 	return nil
+}
+
+func (c *client) GetOne(ctx context.Context, ip string) (*Address, error) {
+	if net.ParseIP(ip) == nil {
+		return nil, &net.ParseError{
+			Type: "IPv4 Address",
+			Text: ip,
+		}
+	}
+	result, err := c.Call(ctx, "GET", fmt.Sprintf("addresses/%s", ip), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to execute GET request")
+	}
+	var address Address
+	if err := json.Unmarshal(result, &address); err != nil {
+		return nil, errors.Wrap(err, "Failed to unmarshal response from JSON")
+	}
+	return &address, nil
+}
+
+func (c *client) GetAll(ctx context.Context) ([]*Address, error) {
+	result, err := c.Call(ctx, "GET", "addresses", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to execute GET request")
+	}
+	var addresses []*Address
+	if err := json.Unmarshal(result, &addresses); err != nil {
+		return nil, errors.Wrap(err, "Failed to unmarshal response from JSON")
+	}
+	return addresses, nil
 }
