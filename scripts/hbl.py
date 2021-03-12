@@ -133,69 +133,50 @@ def main():
     args = parse_args()
     hrbl = HttpCall(args.hbl_url,
                     headers={
-                        "Key": args.hbl_key})
-    if args.manual_remove:
-        if args.dry_run:
-            print('Would remove {} from rbl'.format(args.manual_remove))
-            exit(0)
-        else:
-            for addr in args.manual_remove:
-                try:
-                    ipaddress.IPv4Address(addr)
-                    r = hrbl.delete("/unblock/{0}".format(addr), headers={"Accept": "application/json"})
-                    if r.status_code == 200:
-                        print('Removed {}'.format(addr))
-                except ValueError:
-                    print('Malformed IPv4 address: {}'.format(addr))
-                    exit(1)
-            exit(0)
-    if args.list_banned:
-        #not yet
-        #r = hrbl.get("/search", headers={"Accept": "application/json"})
-        pass
+                        "X-API-Key": args.hbl_key})
 
+    elastic = Es(args)
+    '''
+    Separated query object for future, to be able to generate different objects,
+    if same structure is needed, it should be fine using same object just passing different "lookup=" variable.
+    '''
+    query_obj = elastic.construct_query(lookup='POST /xmlrpc.php.*')
+    response = elastic.execute_search(query_obj)
+    badlist = []
+    for bucket in response.aggregations.ips.buckets:
+        # Discard ipv6
+        try:
+            ipaddress.IPv4Address(bucket['key'])
+        except ValueError:
+            continue
+        # Check if IP is above threshold, > 10 unique webs and is valid ipv4
+        if (bucket['doc_count'] > args.ban_threshold
+                and ipaddress.IPv4Address(bucket['key']).is_global
+                and bucket.hosts['value'] > 10):
+            # Append to list of tuples
+            badlist.append({'ipaddress': bucket['key'],
+                            'xml_hits': bucket['doc_count'],
+                            'uniq_hosts': bucket.hosts['value'],
+                            'time_window': args.time_window})
+    if args.dry_run:
+        for item in badlist:
+            print('would get banned: ',
+                  item.get('ipaddress'),
+                  item.get('xml_hits'),
+                  item.get('uniq_hosts'),
+                  item.get('time_window'))
     else:
-        elastic = Es(args)
-        '''
-        Separated query object for future, to be able to generate different objects,
-        if same structure is needed, it should be fine using same object just passing different "lookup=" variable.
-        '''
-        query_obj = elastic.construct_query(lookup='POST /xmlrpc.php.*')
-        response = elastic.execute_search(query_obj)
-        badlist = []
-
-        for bucket in response.aggregations.ips.buckets:
-            # Discard ipv6
-            try:
-                ipaddress.IPv4Address(bucket['key'])
-            except ValueError:
-                continue
-            # Check if IP is above threshold, > 10 unique webs and is valid ipv4
-            if (bucket['doc_count'] > args.ban_threshold
-                    and ipaddress.IPv4Address(bucket['key']).is_global
-                    and bucket.hosts['value'] > 10):
-                # Append to list of tuples
-                badlist.append({'ipaddress': bucket['key'],
-                                'xml_hits': bucket['doc_count'],
-                                'uniq_hosts': bucket.hosts['value'],
-                                'time_window': args.time_window})
-
-        if args.dry_run:
-            for item in badlist:
-                print('would get banned: ',
-                      item.get('ipaddress'),
-                      item.get('xml_hits'),
-                      item.get('uniq_hosts'),
-                      item.get('time_window'))
-        else:
-            # Do bans
-            for item in badlist:
-                r = hrbl.post("/block", headers={"Accept": "application/json"},
-                              json={"address": item.get('ipaddress'),
-                                    "comment": "xmlrpc bruteforce"})
-                if r.status_code != 200:
-                    print('Ban failed for ip {0}. '
-                          'Reason from API: {1}'.format(item.get('ipaddress'), r.json()['Message']))
+        # Do bans
+        for item in badlist:
+            r = hrbl.post("/addresses", headers={"Accept": "application/json"},
+                          json={"IP": item.get('ipaddress'),
+                                "Action": 'Block',
+                                "Author": "XML importer",
+                                "comment": "xmlrpc bruteforce unique webs: {} count: {}".format(item.get('uniq_hosts'),
+                                                                                                item.get('xml_hits'))})
+            if r.status_code != 200:
+                print('Ban failed for ip {0}. '
+                      'Reason from API: {1}'.format(item.get('ipaddress'), r.json()))
 
 
 if __name__ == "__main__":
