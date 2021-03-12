@@ -6,6 +6,7 @@ Hostinger Block List microservice based on Golang Echo framework. Hostinger Bloc
 
 # Table of contents
 - [CLI](#CLI)
+- [SDK](#SDK)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -55,6 +56,22 @@ Use "hblctl [command] --help" for more information about a command.
 ```bash
 ./hblctl list [<ip>] --hbl-api-host <api-host> --hbl-api-port <api-port> --hbl-api-scheme <api-scheme> --hbl-api-key <api-key>
 ```
+
+# SDK
+There is an official Golang SDK package available, which will help interact with HBL API through code.
+
+Example usage:
+```golang
+import "github.com/hostinger/hbl/sdk"
+
+func main() {
+	c := sdk.NewClient("key", "url")
+	if err := c.Allow(context.Background(), "127.0.0.1", "Author", "Comment"); err != nil {
+		return err
+	}
+}
+```
+For more details on available functions see [SDK](https://github.com/hostinger/hbl/tree/master/sdk)
 
 # Contributing
 Pull requests are welcome. For major changes, issue describing the change needs to be opened before.
