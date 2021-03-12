@@ -1,0 +1,38 @@
+#!groovy​
+
+pipeline {
+  options {
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  agent {
+    label 'docker'
+  }
+
+  environment {
+    TAG     = sh(script: "git log --pretty=format:'%h' -n 1", returnStdout: true).trim()
+  }
+
+  stages {
+    stage ('Build') {
+      steps {
+        sh "/bin/docker build -t eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG} -t eu.gcr.io/hostinger-systems/hostinger-hbl:latest ."
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:latest"
+      }
+    }
+    stage ('Deploy') {
+      steps {
+        sh "/usr/local/bin/argocd app list -l argocd.argoproj.io/service=hbl-prod -o name | xargs -I {arg} argocd app set {arg} -p global.tag=${env.TAG}"
+        sh "/usr/local/bin/argocd app sync -l argocd.argoproj.io/service=hbl-prod"
+      }
+    }
+    stage ('Cleanup') {
+      steps {
+        sh "/bin/docker rmi eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
+        sh "/bin/docker rmi eu.gcr.io/hostinger-systems/hostinger-hbl:latest"
+      }
+    }
+  }
+}

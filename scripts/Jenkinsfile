@@ -1,0 +1,26 @@
+#!groovy​
+
+pipeline {
+  options {
+    disableConcurrentBuilds()
+    timestamps()
+  }
+
+  agent {
+    label 'docker'
+  }
+
+  environment {
+    TAG     = sh(script: "git log --pretty=format:'%h' -n 1", returnStdout: true).trim()
+  }
+
+  stages {
+    stage ('Build and push image') {
+      steps {
+        sh "cd scripts/ && /bin/docker build -t eu.gcr.io/hostinger-systems/hbl-es-importer:${env.TAG} -t eu.gcr.io/hostinger-systems/hbl-es-importer:latest ."
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hbl-es-importer:${env.TAG}"
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hbl-es-importer:latest"
+      }
+    }
+  }
+}
