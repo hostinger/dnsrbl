@@ -13,6 +13,7 @@ require (
 	github.com/slack-go/slack v0.8.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
+	github.com/swaggo/echo-swagger v1.1.0 // indirect
 	github.com/swaggo/swag v1.7.0
 	golang.org/x/tools v0.0.0-20201207182000-5679438983bd // indirect
 )

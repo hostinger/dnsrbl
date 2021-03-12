@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	_ "github.com/hostinger/dnsrbl/docs" // Needed for Swagger
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 type API struct {
@@ -26,13 +26,8 @@ func NewAPI(db *sql.DB) *API {
 
 	server.Use(middleware.Logger())
 	server.Use(middleware.Recover())
-	server.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
-		AuthScheme: "",
-		KeyLookup:  "header:X-API-Key",
-		Validator: func(s string, c echo.Context) (bool, error) {
-			return s == os.Getenv("HBL_API_TOKEN"), nil
-		},
-	}))
+
+	server.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	service := NewService(NewMySQLRepository(db))
 
