@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -26,6 +27,21 @@ var rootCmd = &cobra.Command{
 	Use:   "hblctl",
 	Short: "Hostinger Block List CLI",
 	Long:  "Application which helps interact with Hostinger Block List API service.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if hblScheme == "" && os.Getenv("HBL_API_SCHEME") == "" {
+			return errors.New("Flag or environment variable for 'HBL_API_SCHEME' is required. ")
+		}
+		if hblHost == "" && os.Getenv("HBL_API_HOST") == "" {
+			return errors.New("Flag or environment variable for 'HBL_API_HOST' is required. ")
+		}
+		if hblPort == "" && os.Getenv("HBL_API_PORT") == "" {
+			return errors.New("Flag or environment variable for 'HBL_API_PORT' is required. ")
+		}
+		if hblKey == "" && os.Getenv("HBL_API_KEY") == "" {
+			return errors.New("Flag or environment variable for 'HBL_API_KEY' is required. ")
+		}
+		return nil
+	},
 }
 
 func main() {
