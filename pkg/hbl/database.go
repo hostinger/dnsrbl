@@ -14,11 +14,11 @@ import (
 
 func InitDB(ctx context.Context) (*sql.DB, error) {
 	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-		os.Getenv("MYSQL_USERNAME"),
-		os.Getenv("MYSQL_PASSWORD"),
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_DB"),
+		os.Getenv("HBL_MYSQL_USERNAME"),
+		os.Getenv("HBL_MYSQL_PASSWORD"),
+		os.Getenv("HBL_MYSQL_HOST"),
+		os.Getenv("HBL_MYSQL_PORT"),
+		os.Getenv("HBL_MYSQL_DATABASE"),
 	)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
