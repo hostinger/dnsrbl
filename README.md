@@ -6,8 +6,10 @@ Hostinger Block List microservice based on Golang Echo framework. Hostinger Bloc
 
 # Table of contents
 - [Docs](#Docs)
+- [API](#API)
 - [CLI](#CLI)
 - [SDK](#SDK)
+- [Development](#Development)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -18,6 +20,15 @@ Upon API changes, a separate PR should be opened to update documentation. Docume
 ```
 swag init -g cmd/hbl.go
 ```
+
+# API
+For API we use Golang Echo framework (https://echo.labstack.com/).
+
+### Headers
+Every request to API must have `Content-Type: application/json` set or the request will be ignored.
+
+### Authentication
+Every request, which has `KeyAuthMiddleware` function enabled expects `X-API-Key` request header with the API token. Requests without this or invalid token will return an `Unauthorized` response.
 
 # CLI
 There is a CLI application available, which helps interact with HBL API right from the terminal.
@@ -81,6 +92,9 @@ func main() {
 }
 ```
 For more details on available functions see [SDK](https://github.com/hostinger/hbl/tree/master/sdk)
+
+# Development
+For local development we use Docker. Dockerfile expects an `.env` file to be created with credentials at the root directory. You can find this `.env` file inside Vault.
 
 # Contributing
 Pull requests are welcome. For major changes, issue describing the change needs to be opened before.
