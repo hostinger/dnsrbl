@@ -18,8 +18,7 @@ pipeline {
     stage ('Build') {
       steps {
         sh "/bin/docker build -t eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG} -t eu.gcr.io/hostinger-systems/hostinger-hbl:latest ."
-        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:${env.TAG}"
-        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl:latest"
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hostinger-hbl --all-tags"
       }
     }
     stage ('Deploy') {

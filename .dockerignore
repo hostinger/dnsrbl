@@ -1,1 +1,6 @@
 *scripts/
+.git/
+.gitignore
+docker-compose.yml
+Jenkinsfile*
+README.md
