@@ -18,8 +18,7 @@ pipeline {
     stage ('Build and push image') {
       steps {
         sh "cd scripts/ && /bin/docker build -t eu.gcr.io/hostinger-systems/hbl-es-importer:${env.TAG} -t eu.gcr.io/hostinger-systems/hbl-es-importer:latest ."
-        sh "/bin/docker push eu.gcr.io/hostinger-systems/hbl-es-importer:${env.TAG}"
-        sh "/bin/docker push eu.gcr.io/hostinger-systems/hbl-es-importer:latest"
+        sh "/bin/docker push eu.gcr.io/hostinger-systems/hbl-es-importer --all-tags"
       }
     }
   }

@@ -26,6 +26,14 @@ pipeline {
         sh "/usr/local/bin/argocd app list -l argocd.argoproj.io/service=hbl-stage -o name | xargs -I {arg} argocd app set {arg} -p global.tag=${env.TAG}"
         sh "/usr/local/bin/argocd app sync -l argocd.argoproj.io/service=hbl-stage"
       }
+      post {
+        failure {
+          slackSend (color: 'danger', channel: "#hbl", baseUrl: 'https://hostinger.slack.com/services/hooks/jenkins-ci/', tokenCredentialId: 'webhosting_slack_jenkins', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+        }
+        success {
+          slackSend (color: 'good', channel: "#hbl", baseUrl: 'https://hostinger.slack.com/services/hooks/jenkins-ci/', tokenCredentialId: 'webhosting_slack_jenkins', message: "Success: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+        }
+      }
     }
     stage ('Cleanup') {
       steps {
