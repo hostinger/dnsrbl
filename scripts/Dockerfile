@@ -6,7 +6,7 @@ RUN apk add --no-cache \
   py3-pip \
   py3-setuptools 
 
-COPY es_importer.py.py .
+COPY es_importer.py .
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
