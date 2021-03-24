@@ -9,10 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Error struct {
-	Message string `json:"message"`
-}
-
 // @Summary     Block or Allow an IP address.
 // @Description Use this endpoint to Block or Allow an IP address depending on Action argument in body.
 // @Produce     json
@@ -144,6 +140,27 @@ func (api *API) handleAddressesCheck(c echo.Context) error {
 		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
 	}
 	return c.JSON(200, result)
+}
+
+func (api *API) handleAddressesSyncAll(c echo.Context) error {
+	if err := api.Service.SyncAll(context.Background()); err != nil {
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+	}
+	return c.JSON(200, nil)
+}
+
+func (api *API) handleAddressesSyncOne(c echo.Context) error {
+	ip := c.Param("ip")
+	if net.ParseIP(ip) == nil {
+		return echo.NewHTTPError(422, "Param 'IP' must be a valid IP address")
+	}
+	if err := api.Service.SyncOne(context.Background(), ip); err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(404, "Address doesn't exist")
+		}
+		return echo.NewHTTPError(500, fmt.Sprintf("Error: %s", err))
+	}
+	return c.JSON(200, nil)
 }
 
 func (api *API) handleHealth(c echo.Context) error {

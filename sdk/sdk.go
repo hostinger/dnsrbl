@@ -28,6 +28,8 @@ type Client interface {
 	GetOne(ctx context.Context, ip string) (*Address, error)
 	GetAll(ctx context.Context) ([]*Address, error)
 	Delete(ctx context.Context, ip string) error
+	SyncOne(ctx context.Context, ip string) error
+	SyncAll(ctx context.Context) error
 }
 
 type client struct {
@@ -146,4 +148,20 @@ func (c *client) GetAll(ctx context.Context) ([]*Address, error) {
 		return nil, errors.Wrap(err, "Failed to unmarshal response from JSON")
 	}
 	return addresses, nil
+}
+
+func (c *client) SyncAll(ctx context.Context) error {
+	_, err := c.Call(ctx, "POST", "addresses/sync", nil)
+	if err != nil {
+		return errors.Wrap(err, "Failed to execute POST request")
+	}
+	return nil
+}
+
+func (c *client) SyncOne(ctx context.Context, ip string) error {
+	_, err := c.Call(ctx, "POST", fmt.Sprintf("addresses/sync/%s", ip), nil)
+	if err != nil {
+		return errors.Wrap(err, "Failed to execute POST request")
+	}
+	return nil
 }
