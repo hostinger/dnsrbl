@@ -52,7 +52,7 @@ func (api *API) Start() error {
 	api.SetupRoutes()
 	uri := fmt.Sprintf("%s:%s", api.Cfg.Host, api.Cfg.Port)
 	if err := api.Server.Start(uri); err != nil && err != http.ErrServerClosed {
-		api.Server.Logger.Fatal("Exiting.")
+		api.Cfg.Logger.Fatal(err.Error())
 	}
 	return nil
 }
