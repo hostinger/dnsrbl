@@ -2,11 +2,11 @@ package hbl
 
 import (
 	"context"
-	"log"
 
 	"github.com/hostinger/hbl/pkg/alerters"
 	"github.com/hostinger/hbl/pkg/checkers"
 	"github.com/hostinger/hbl/pkg/endpoints"
+	"go.uber.org/zap"
 )
 
 type Service interface {
@@ -22,12 +22,14 @@ type Service interface {
 }
 
 type service struct {
-	Repository Repository
+	logger     *zap.Logger
+	repository Repository
 }
 
-func NewService(repository Repository) Service {
+func NewService(l *zap.Logger, r Repository) Service {
 	return &service{
-		Repository: repository,
+		repository: r,
+		logger:     l,
 	}
 }
 
@@ -43,7 +45,7 @@ func (s *service) Unblock(ctx context.Context, address *Address) error {
 }
 
 func (s *service) Block(ctx context.Context, address *Address) error {
-	if err := s.Repository.CreateAddress(ctx, address); err != nil {
+	if err := s.repository.CreateAddress(ctx, address); err != nil {
 		return err
 	}
 	if err := endpoints.ExecuteOnAll(ctx, address.IP, "Block"); err != nil {
@@ -57,7 +59,7 @@ func (s *service) Block(ctx context.Context, address *Address) error {
 }
 
 func (s *service) Allow(ctx context.Context, address *Address) error {
-	if err := s.Repository.CreateAddress(ctx, address); err != nil {
+	if err := s.repository.CreateAddress(ctx, address); err != nil {
 		return err
 	}
 	alerters.AlertOnAll(ctx,
@@ -68,15 +70,15 @@ func (s *service) Allow(ctx context.Context, address *Address) error {
 }
 
 func (s *service) Delete(ctx context.Context, ip string) error {
-	return s.Repository.DeleteAddress(ctx, ip)
+	return s.repository.DeleteAddress(ctx, ip)
 }
 
 func (s *service) GetOne(ctx context.Context, ip string) (*Address, error) {
-	return s.Repository.GetAddress(ctx, ip)
+	return s.repository.GetAddress(ctx, ip)
 }
 
 func (s *service) GetAll(ctx context.Context) ([]*Address, error) {
-	return s.Repository.GetAddresses(ctx)
+	return s.repository.GetAddresses(ctx)
 }
 
 func (s *service) Check(ctx context.Context, name, ip string) (interface{}, error) {
@@ -84,19 +86,19 @@ func (s *service) Check(ctx context.Context, name, ip string) (interface{}, erro
 }
 
 func (s *service) SyncOne(ctx context.Context, ip string) error {
-	address, err := s.Repository.GetAddress(ctx, ip)
+	address, err := s.repository.GetAddress(ctx, ip)
 	if err != nil {
 		return err
 	}
 	if err := endpoints.ExecuteOnAll(ctx, address.IP, "Sync"); err != nil {
 		return err
 	}
-	log.Printf("Successfully synced address '%s' with all endpoints", address.IP)
+	s.logger.Info("Synced address with all endpoints", zap.String("address", address.IP))
 	return nil
 }
 
 func (s *service) SyncAll(ctx context.Context) error {
-	addresses, err := s.Repository.GetAddresses(ctx)
+	addresses, err := s.repository.GetAddresses(ctx)
 	if err != nil {
 		return err
 	}
@@ -104,7 +106,7 @@ func (s *service) SyncAll(ctx context.Context) error {
 		if err := endpoints.ExecuteOnAll(ctx, address.IP, "Sync"); err != nil {
 			return err
 		}
-		log.Printf("Successfully synced address '%s' with all endpoints", address.IP)
+		s.logger.Info("Synced address with all endpoints", zap.String("address", address.IP))
 	}
 	return nil
 }
