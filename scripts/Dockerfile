@@ -11,4 +11,4 @@ COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
-CMD [ "python3", "./hbl.py" ]
+CMD [ "python3", "./es_importer.py" ]

@@ -29,10 +29,6 @@ def parse_args():
 
     optional.add_argument("--time_window", default=10, help="Time window, in minutes",
                           choices=(10, 15, 30, 60), type=int, env_var='TIME_WINDOW')
-    optional.add_argument("--manual_remove", help='list of IPS to remove from rbl',
-                          env_var='MANUAL_REMOVE', nargs='+')
-    optional.add_argument("--list_banned", default=False, action='store_true', help='list of banned IPS from rbl',
-                          env_var='LIST_BANNED')
     optional.add_argument("--dry_run", default=False, action='store_true', help='Just print, do not change',
                           env_var='DRY_RUN')
     return parser.parse_args()
@@ -171,7 +167,7 @@ def main():
             r = hrbl.post("/addresses", headers={"Accept": "application/json"},
                           json={"IP": item.get('ipaddress'),
                                 "Action": 'Block',
-                                "Author": "XML importer",
+                                "Author": "WH ES importer",
                                 "comment": "xmlrpc bruteforce unique webs: {} count: {}".format(item.get('uniq_hosts'),
                                                                                                 item.get('xml_hits'))})
             if r.status_code != 200:

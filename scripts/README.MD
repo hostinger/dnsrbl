@@ -1,4 +1,4 @@
-# hbl
+# es_importer
 
 ```
 This script will fetch data from ElasticSearch and BAN IP addresses in hbl API. If an arg is specified in more than one place, then commandline values override environment variables which override defaults.
@@ -22,8 +22,5 @@ optional arguments:
                         Count to get banned, integer, default: 1000 [env var: BAN_THRESHOLD]
   --time_window {10,15,30,60}
                         Time window, in minutes [env var: TIME_WINDOW]
-  --manual_remove MANUAL_REMOVE [MANUAL_REMOVE ...]
-                        list of IPS to remove from rbl [env var: MANUAL_REMOVE]
-  --list_banned         list of banned IPS from rbl [env var: LIST_BANNED]
   --dry_run             Just print, do not change [env var: DRY_RUN]
 ```
