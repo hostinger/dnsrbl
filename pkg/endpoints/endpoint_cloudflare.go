@@ -4,36 +4,40 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
-	"github.com/caarlos0/env"
 	"github.com/cloudflare/cloudflare-go"
+	"go.uber.org/zap"
 )
 
-type CloudflareEndpoint struct {
-	Client    *cloudflare.API
-	AccountID string `env:"CF_API_ACCOUNT,required"`
-	Email     string `env:"CF_API_EMAIL,required"`
-	Key       string `env:"CF_API_KEY,required"`
+type cloudflareEndpoint struct {
+	l       *zap.Logger
+	client  *cloudflare.API
+	account string
+	email   string
+	key     string
 }
 
-func NewCloudflareEndpoint() Endpoint {
-	e := &CloudflareEndpoint{}
-	if err := env.Parse(e); err != nil {
-		log.Fatalf("Endpoints: CloudflareEndpoint: %s", err)
+func NewCloudflareEndpoint(l *zap.Logger) Endpoint {
+	e := &cloudflareEndpoint{
+		account: os.Getenv("CF_API_ACCOUNT"),
+		email:   os.Getenv("CF_API_EMAIL"),
+		key:     os.Getenv("CF_API_KEY"),
+		l:       l,
 	}
-	api, err := cloudflare.New(e.Key, e.Email)
+	api, err := cloudflare.New(e.key, e.email)
 	if err != nil {
 		log.Fatalf("Endpoints: CloudflareEndpoint: %s", err)
 	}
-	e.Client = api
+	e.client = api
 	return e
 }
 
-func (c *CloudflareEndpoint) Name() string {
+func (c *cloudflareEndpoint) Name() string {
 	return "Cloudflare"
 }
 
-func (c *CloudflareEndpoint) Block(ctx context.Context, ip string) error {
+func (c *cloudflareEndpoint) Block(ctx context.Context, ip string) error {
 	rule := cloudflare.AccessRule{
 		Mode: "block",
 		Configuration: cloudflare.AccessRuleConfiguration{
@@ -42,14 +46,14 @@ func (c *CloudflareEndpoint) Block(ctx context.Context, ip string) error {
 		},
 		Notes: "Created automatically by HBL API.",
 	}
-	response, err := c.Client.CreateAccountAccessRule(ctx, c.AccountID, rule)
+	response, err := c.client.CreateAccountAccessRule(ctx, c.account, rule)
 	if err != nil || !response.Success {
 		return err
 	}
 	return nil
 }
 
-func (c *CloudflareEndpoint) Unblock(ctx context.Context, ip string) error {
+func (c *cloudflareEndpoint) Unblock(ctx context.Context, ip string) error {
 	rule := cloudflare.AccessRule{
 		Mode: "block",
 		Configuration: cloudflare.AccessRuleConfiguration{
@@ -58,21 +62,21 @@ func (c *CloudflareEndpoint) Unblock(ctx context.Context, ip string) error {
 		},
 		Notes: "Created automatically by HBL API.",
 	}
-	rules, err := c.Client.ListAccountAccessRules(ctx, c.AccountID, rule, 1)
+	rules, err := c.client.ListAccountAccessRules(ctx, c.account, rule, 1)
 	if err != nil {
 		return err
 	}
 	if rules.Count <= 0 || rules.Count > 1 {
 		return fmt.Errorf("AccessRule for IP address '%s' was not found. ", ip)
 	}
-	response, err := c.Client.DeleteAccountAccessRule(ctx, c.AccountID, rules.Result[0].ID)
+	response, err := c.client.DeleteAccountAccessRule(ctx, c.account, rules.Result[0].ID)
 	if err != nil || !response.Success {
 		return err
 	}
 	return nil
 }
 
-func (c *CloudflareEndpoint) Exists(ctx context.Context, ip string) error {
+func (c *cloudflareEndpoint) Exists(ctx context.Context, ip string) error {
 	rule := cloudflare.AccessRule{
 		Mode: "block",
 		Configuration: cloudflare.AccessRuleConfiguration{
@@ -81,7 +85,7 @@ func (c *CloudflareEndpoint) Exists(ctx context.Context, ip string) error {
 		},
 		Notes: "Created automatically by HBL API.",
 	}
-	rules, err := c.Client.ListAccountAccessRules(ctx, c.AccountID, rule, 1)
+	rules, err := c.client.ListAccountAccessRules(ctx, c.account, rule, 1)
 	if err != nil {
 		return err
 	}
@@ -91,7 +95,7 @@ func (c *CloudflareEndpoint) Exists(ctx context.Context, ip string) error {
 	return nil
 }
 
-func (c *CloudflareEndpoint) Sync(ctx context.Context, ip string) error {
+func (c *cloudflareEndpoint) Sync(ctx context.Context, ip string) error {
 	if err := c.Exists(ctx, ip); err != nil {
 		return c.Block(ctx, ip)
 	}
