@@ -9,6 +9,7 @@ import (
 
 type Endpoint interface {
 	Name() string
+	Sync(ctx context.Context, ip string) error
 	Block(ctx context.Context, ip string) error
 	Unblock(ctx context.Context, ip string) error
 }
@@ -29,6 +30,10 @@ func ExecuteOnAll(ctx context.Context, ip, action string) error {
 			if err := endpoint.Unblock(ctx, ip); err != nil {
 				return errors.Wrapf(err, "Unblock failed on Endpoint '%s'", endpoint.Name())
 			}
+		case "Sync":
+			if err := endpoint.Sync(ctx, ip); err != nil {
+				return errors.Wrapf(err, "Sync failed on Endpoint '%s'", endpoint.Name())
+			}
 		}
 	}
 	return nil
@@ -44,6 +49,10 @@ func ExecuteOnOne(ctx context.Context, ip, action, name string) error {
 		case "Unblock":
 			if err := endpoint.Unblock(ctx, ip); err != nil {
 				return errors.Wrapf(err, "Unblock failed on Endpoint '%s'", endpoint.Name())
+			}
+		case "Sync":
+			if err := endpoint.Sync(ctx, ip); err != nil {
+				return errors.Wrapf(err, "Sync failed on Endpoint '%s'", endpoint.Name())
 			}
 		}
 	}

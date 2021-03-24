@@ -46,6 +46,7 @@ Available Commands:
   block
   delete
   list
+  sync
 
 Flags:
       --config string           config file (default is $HOME/.hblctl.yaml)
@@ -75,6 +76,11 @@ Use "hblctl [command] --help" for more information about a command.
 ### List
 ```bash
 ./hblctl list [<ip>] --hbl-api-host <api-host> --hbl-api-port <api-port> --hbl-api-scheme <api-scheme> --hbl-api-key <api-key>
+```
+
+### Sync
+```bash
+./hblctl sync [<ip>] --hbl-api-host <api-host> --hbl-api-port <api-port> --hbl-api-scheme <api-scheme> --hbl-api-key <api-key>
 ```
 
 # SDK

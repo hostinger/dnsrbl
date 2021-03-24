@@ -63,6 +63,22 @@ func (api *API) GetRoutes() []*Route {
 				KeyAuthMiddleware,
 			},
 		},
+		{
+			Method: "POST",
+			Path:   "/api/v1/addresses/sync",
+			Func:   api.handleAddressesSyncAll,
+			Middleware: []echo.MiddlewareFunc{
+				KeyAuthMiddleware,
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/api/v1/addresses/sync/:ip",
+			Func:   api.handleAddressesSyncOne,
+			Middleware: []echo.MiddlewareFunc{
+				KeyAuthMiddleware,
+			},
+		},
 	}
 }
 
