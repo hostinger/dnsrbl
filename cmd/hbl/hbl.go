@@ -12,6 +12,7 @@ import (
 	"github.com/hostinger/hbl/pkg/checkers"
 	"github.com/hostinger/hbl/pkg/endpoints"
 	"github.com/hostinger/hbl/pkg/hbl"
+	"go.uber.org/zap"
 )
 
 // @title Hostinger Block List API
@@ -51,10 +52,22 @@ func main() {
 		checkers.Register(checkers.NewAbuseIPDBChecker(db))
 	}
 
-	api := hbl.NewAPI(db)
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Printf("Logger: %s", err)
+	}
+
+	api := hbl.NewAPI(
+		&hbl.Config{
+			DB:     db,
+			Host:   os.Getenv("HBL_LISTEN_ADDRESS"),
+			Port:   os.Getenv("HBL_LISTEN_PORT"),
+			Logger: logger,
+		},
+	)
 
 	go func() {
-		if err := api.Start(os.Getenv("HBL_LISTEN_ADDRESS"), os.Getenv("HBL_LISTEN_PORT")); err != nil {
+		if err := api.Start(); err != nil {
 			log.Fatalf("Failure: %s", err)
 		}
 	}()

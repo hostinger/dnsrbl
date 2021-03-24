@@ -14,4 +14,6 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/swaggo/echo-swagger v1.1.0
 	github.com/swaggo/swag v1.7.0
+	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/zap v1.16.0
 )

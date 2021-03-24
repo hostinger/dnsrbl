@@ -3,37 +3,30 @@ package hbl
 import (
 	"context"
 	"database/sql"
+
+	"go.uber.org/zap"
 )
 
 type Repository interface {
-	GetAddresses(
-		ctx context.Context,
-	) ([]*Address, error)
-
-	CreateAddress(
-		ctx context.Context, address *Address,
-	) error
-
-	DeleteAddress(
-		ctx context.Context, ip string,
-	) error
-
-	GetAddress(
-		ctx context.Context, ip string,
-	) (*Address, error)
+	GetAddress(ctx context.Context, ip string) (*Address, error)
+	CreateAddress(ctx context.Context, address *Address) error
+	GetAddresses(ctx context.Context) ([]*Address, error)
+	DeleteAddress(ctx context.Context, ip string) error
 }
 
-type MySQLRepository struct {
+type mysqlRepository struct {
+	l  *zap.Logger
 	DB *sql.DB
 }
 
-func NewMySQLRepository(db *sql.DB) Repository {
-	return &MySQLRepository{
+func NewMySQLRepository(l *zap.Logger, db *sql.DB) Repository {
+	return &mysqlRepository{
+		l:  l,
 		DB: db,
 	}
 }
 
-func (s *MySQLRepository) CreateAddress(ctx context.Context, address *Address) error {
+func (s *mysqlRepository) CreateAddress(ctx context.Context, address *Address) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -68,7 +61,7 @@ func (s *MySQLRepository) CreateAddress(ctx context.Context, address *Address) e
 	return nil
 }
 
-func (s *MySQLRepository) DeleteAddress(ctx context.Context, ip string) error {
+func (s *mysqlRepository) DeleteAddress(ctx context.Context, ip string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -91,7 +84,7 @@ func (s *MySQLRepository) DeleteAddress(ctx context.Context, ip string) error {
 	return nil
 }
 
-func (s *MySQLRepository) GetAddress(ctx context.Context, ip string) (*Address, error) {
+func (s *mysqlRepository) GetAddress(ctx context.Context, ip string) (*Address, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -121,7 +114,7 @@ func (s *MySQLRepository) GetAddress(ctx context.Context, ip string) (*Address, 
 	return &address, nil
 }
 
-func (s *MySQLRepository) GetAddresses(ctx context.Context) ([]*Address, error) {
+func (s *mysqlRepository) GetAddresses(ctx context.Context) ([]*Address, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
