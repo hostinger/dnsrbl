@@ -6,41 +6,45 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/caarlos0/env"
 	"github.com/hostinger/hbl/pkg/utils"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
-type PDNSEndpoint struct {
-	Client  *http.Client
-	BaseURL string
-	Scheme  string `env:"PDNS_API_SCHEME,required"`
-	Zone    string `env:"PDNS_API_ZONE,required"`
-	Host    string `env:"PDNS_API_HOST,required"`
-	Port    string `env:"PDNS_API_PORT,required"`
-	Key     string `env:"PDNS_API_KEY,required"`
+type pdnsEndpoint struct {
+	l       *zap.Logger
+	client  *http.Client
+	baseURL string
+	scheme  string
+	zone    string
+	host    string
+	port    string
+	key     string
 }
 
-func NewPDNSEndpoint() Endpoint {
-	c := &PDNSEndpoint{
-		Client: &http.Client{
+func NewPDNSEndpoint(l *zap.Logger) Endpoint {
+	c := &pdnsEndpoint{
+		client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
+		scheme: os.Getenv("PDNS_API_SCHEME"),
+		zone:   os.Getenv("PDNS_API_ZONE"),
+		host:   os.Getenv("PDNS_API_HOST"),
+		port:   os.Getenv("PDNS_API_PORT"),
+		key:    os.Getenv("PDNS_API_KEY"),
+		l:      l,
 	}
-	if err := env.Parse(c); err != nil {
-		log.Fatalf("Endpoints: PDNSEndpoint: %s", err)
-	}
-	c.BaseURL = fmt.Sprintf("%s://%s:%s/api/v1/servers/localhost", c.Scheme, c.Host, c.Port)
+	c.baseURL = fmt.Sprintf("%s://%s:%s/api/v1/servers/localhost", c.scheme, c.host, c.port)
 	return c
 }
 
-func (c *PDNSEndpoint) Call(ctx context.Context, uri, method string, code int, data interface{}) ([]byte, error) {
+func (c *pdnsEndpoint) Call(ctx context.Context, uri, method string, code int, data interface{}) ([]byte, error) {
 	body, err := json.Marshal(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to marshal body into JSON")
@@ -49,9 +53,9 @@ func (c *PDNSEndpoint) Call(ctx context.Context, uri, method string, code int, d
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed creating new request object")
 	}
-	req.Header.Set("X-API-Key", c.Key)
+	req.Header.Set("X-API-Key", c.key)
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed executing request")
 	}
@@ -69,7 +73,7 @@ func (c *PDNSEndpoint) Call(ctx context.Context, uri, method string, code int, d
 	return body, nil
 }
 
-func (c *PDNSEndpoint) PatchZone(ctx context.Context, ip, action string) error {
+func (c *pdnsEndpoint) PatchZone(ctx context.Context, ip, action string) error {
 	type Record struct {
 		Content  string `json:"content"`
 		Disabled bool   `json:"disabled"`
@@ -91,7 +95,7 @@ func (c *PDNSEndpoint) PatchZone(ctx context.Context, ip, action string) error {
 	data := Zone{
 		RRSets: []RRSet{
 			{
-				Name:       fmt.Sprintf("%s.%s.", reverseIP, c.Zone),
+				Name:       fmt.Sprintf("%s.%s.", reverseIP, c.zone),
 				Type:       "A",
 				TTL:        3600,
 				ChangeType: action,
@@ -104,14 +108,14 @@ func (c *PDNSEndpoint) PatchZone(ctx context.Context, ip, action string) error {
 			},
 		},
 	}
-	uri := fmt.Sprintf("%s/zones/%s", c.BaseURL, c.Zone)
+	uri := fmt.Sprintf("%s/zones/%s", c.baseURL, c.zone)
 	if _, err := c.Call(ctx, uri, "PATCH", 204, data); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *PDNSEndpoint) SearchZone(ctx context.Context, ip string) error {
+func (c *pdnsEndpoint) SearchZone(ctx context.Context, ip string) error {
 	type SearchResult struct {
 		Content    string `json:"content"`
 		Disabled   bool   `json:"disabled"`
@@ -126,7 +130,7 @@ func (c *PDNSEndpoint) SearchZone(ctx context.Context, ip string) error {
 		return errors.New("Argument 'IP' must be a valid IP address")
 	}
 	reverseIP := utils.ReverseAddress(strings.Split(ip, "."))
-	uri := fmt.Sprintf("%s/search-data?q=%s.%s&object_type=%s&max=1", c.BaseURL, reverseIP, c.Zone, "record")
+	uri := fmt.Sprintf("%s/search-data?q=%s.%s&object_type=%s&max=1", c.baseURL, reverseIP, c.zone, "record")
 
 	resp, err := c.Call(ctx, uri, "GET", 200, nil)
 	if err != nil {
@@ -145,23 +149,23 @@ func (c *PDNSEndpoint) SearchZone(ctx context.Context, ip string) error {
 	return nil
 }
 
-func (c *PDNSEndpoint) Name() string {
+func (c *pdnsEndpoint) Name() string {
 	return "PowerDNS"
 }
 
-func (c *PDNSEndpoint) Block(ctx context.Context, ip string) error {
+func (c *pdnsEndpoint) Block(ctx context.Context, ip string) error {
 	return c.PatchZone(ctx, ip, "REPLACE")
 }
 
-func (c *PDNSEndpoint) Unblock(ctx context.Context, ip string) error {
+func (c *pdnsEndpoint) Unblock(ctx context.Context, ip string) error {
 	return c.PatchZone(ctx, ip, "DELETE")
 }
 
-func (c *PDNSEndpoint) Exists(ctx context.Context, ip string) error {
+func (c *pdnsEndpoint) Exists(ctx context.Context, ip string) error {
 	return c.SearchZone(ctx, ip)
 }
 
-func (c *PDNSEndpoint) Sync(ctx context.Context, ip string) error {
+func (c *pdnsEndpoint) Sync(ctx context.Context, ip string) error {
 	if err := c.Exists(ctx, ip); err != nil {
 		return c.PatchZone(ctx, ip, "REPLACE")
 	}

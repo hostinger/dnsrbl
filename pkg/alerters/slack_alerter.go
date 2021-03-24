@@ -4,34 +4,38 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/caarlos0/env"
 	"github.com/slack-go/slack"
+	"go.uber.org/zap"
 )
 
-type SlackAlerter struct {
-	URL      string `env:"SLACK_WEBHOOK_URL,required"`
-	Username string `env:"SLACK_WEBHOOK_USERNAME,required"`
-	Channel  string `env:"SLACK_WEBHOOK_CHANNEL,required"`
+type slackAlerter struct {
+	l        *zap.Logger
+	url      string
+	username string
+	channel  string
 }
 
-func NewSlackAlerter() Alerter {
-	c := &SlackAlerter{}
-	if err := env.Parse(c); err != nil {
-		log.Fatalf("Alerters: SlackAlerter: %s", err)
+func NewSlackAlerter(l *zap.Logger) Alerter {
+	c := &slackAlerter{
+		l:        l,
+		url:      os.Getenv("SLACK_WEBHOOK_URL"),
+		channel:  os.Getenv("SLACK_WEBHOOK_CHANNEL"),
+		username: os.Getenv("SLACK_WEBHOOK_USERNAME"),
 	}
 	return c
 }
 
-func (s *SlackAlerter) Name() string {
+func (s *slackAlerter) Name() string {
 	return "Slack"
 }
 
-func (s *SlackAlerter) Alert(ctx context.Context, alert *Alert) {
+func (s *slackAlerter) Alert(ctx context.Context, alert *Alert) {
 	message := &slack.WebhookMessage{
-		Username: s.Username,
-		Channel:  s.Channel,
+		Username: s.username,
+		Channel:  s.channel,
 		Blocks: &slack.Blocks{
 			BlockSet: []slack.Block{
 				slack.SectionBlock{
@@ -54,7 +58,7 @@ func (s *SlackAlerter) Alert(ctx context.Context, alert *Alert) {
 			},
 		},
 	}
-	if err := slack.PostWebhookContext(ctx, s.URL, message); err != nil {
+	if err := slack.PostWebhookContext(ctx, s.url, message); err != nil {
 		log.Printf("SlackAlerter: Alert: %s", err)
 	}
 }

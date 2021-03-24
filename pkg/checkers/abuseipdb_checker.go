@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/caarlos0/env"
+	"go.uber.org/zap"
 )
 
 type AbuseIPDBReport struct {
@@ -25,32 +25,32 @@ type AbuseIPDBReport struct {
 	LastReportedAt       *time.Time
 }
 
-type AbuseIPDBChecker struct {
-	Client  *http.Client
+type abuseipdbChecker struct {
+	l       *zap.Logger
 	DB      *sql.DB
-	BaseURL string
-	Key     string `env:"ABUSEIPDB_API_KEY,required"`
+	client  *http.Client
+	baseURL string
+	key     string
 }
 
-func NewAbuseIPDBChecker(db *sql.DB) Checker {
-	c := &AbuseIPDBChecker{
-		Client: &http.Client{
+func NewAbuseIPDBChecker(l *zap.Logger, db *sql.DB) Checker {
+	c := &abuseipdbChecker{
+		client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		BaseURL: "https://api.abuseipdb.com/api/v2",
+		baseURL: "https://api.abuseipdb.com/api/v2",
+		key:     os.Getenv("ABUSEIPDB_API_KEY"),
 		DB:      db,
-	}
-	if err := env.Parse(c); err != nil {
-		log.Fatalf("Checkers: AbuseIPDBChecker: Failed to initialize from environment variables: %s", err)
+		l:       l,
 	}
 	return c
 }
 
-func (c *AbuseIPDBChecker) Name() string {
+func (c *abuseipdbChecker) Name() string {
 	return "AbuseIPDB"
 }
 
-func (c *AbuseIPDBChecker) Call(ctx context.Context, ip string) (*AbuseIPDBReport, error) {
+func (c *abuseipdbChecker) Call(ctx context.Context, ip string) (*AbuseIPDBReport, error) {
 	type Result struct {
 		Data struct {
 			Hostnames            []interface{} `json:"hostnames"`
@@ -73,7 +73,7 @@ func (c *AbuseIPDBChecker) Call(ctx context.Context, ip string) (*AbuseIPDBRepor
 		return nil, fmt.Errorf("argument must be a valid IP address")
 	}
 
-	uri := fmt.Sprintf("%s/check", c.BaseURL)
+	uri := fmt.Sprintf("%s/check", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	if err != nil {
 		return nil, err
@@ -83,10 +83,10 @@ func (c *AbuseIPDBChecker) Call(ctx context.Context, ip string) (*AbuseIPDBRepor
 
 	req.URL.RawQuery = q.Encode()
 
-	req.Header.Set("Key", c.Key)
+	req.Header.Set("Key", c.key)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (c *AbuseIPDBChecker) Call(ctx context.Context, ip string) (*AbuseIPDBRepor
 	}, nil
 }
 
-func (c *AbuseIPDBChecker) Check(ctx context.Context, ip string) (interface{}, error) {
+func (c *abuseipdbChecker) Check(ctx context.Context, ip string) (interface{}, error) {
 	report, err := c.GetReport(ctx, ip)
 	if err != nil && err == sql.ErrNoRows {
 		report, err = c.Call(ctx, ip)
@@ -128,7 +128,7 @@ func (c *AbuseIPDBChecker) Check(ctx context.Context, ip string) (interface{}, e
 	return report, nil
 }
 
-func (c *AbuseIPDBChecker) SaveReport(ctx context.Context, report *AbuseIPDBReport) error {
+func (c *abuseipdbChecker) SaveReport(ctx context.Context, report *AbuseIPDBReport) error {
 	tx, err := c.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (c *AbuseIPDBChecker) SaveReport(ctx context.Context, report *AbuseIPDBRepo
 	return nil
 }
 
-func (c *AbuseIPDBChecker) GetReport(ctx context.Context, ip string) (*AbuseIPDBReport, error) {
+func (c *abuseipdbChecker) GetReport(ctx context.Context, ip string) (*AbuseIPDBReport, error) {
 	var report AbuseIPDBReport
 	tx, err := c.DB.BeginTx(ctx, nil)
 	if err != nil {

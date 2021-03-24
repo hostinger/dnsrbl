@@ -29,29 +29,6 @@ func main() {
 		log.Printf("Database: %s", err)
 	}
 
-	switch os.Getenv("ENVIRONMENT") {
-	case "PRODUCTION":
-		// Endpoints
-		endpoints.Register(endpoints.NewCloudflareEndpoint())
-		endpoints.Register(endpoints.NewPDNSEndpoint())
-		// Checkers
-		checkers.Register(checkers.NewAbuseIPDBChecker(db))
-		// Alerters
-		alerters.Register(alerters.NewSlackAlerter())
-	case "STAGING":
-		// Endpoints
-		endpoints.Register(endpoints.NewPDNSEndpoint())
-		// Checkers
-		checkers.Register(checkers.NewAbuseIPDBChecker(db))
-		// Alerters
-		alerters.Register(alerters.NewSlackAlerter())
-	default:
-		// Endpoints
-		endpoints.Register(endpoints.NewPDNSEndpoint())
-		// Checkers
-		checkers.Register(checkers.NewAbuseIPDBChecker(db))
-	}
-
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Printf("Logger: %s", err)
@@ -65,6 +42,29 @@ func main() {
 			Logger: logger,
 		},
 	)
+
+	switch os.Getenv("ENVIRONMENT") {
+	case "PRODUCTION":
+		// Endpoints
+		endpoints.Register(endpoints.NewCloudflareEndpoint(logger))
+		endpoints.Register(endpoints.NewPDNSEndpoint(logger))
+		// Checkers
+		checkers.Register(checkers.NewAbuseIPDBChecker(logger, db))
+		// Alerters
+		alerters.Register(alerters.NewSlackAlerter(logger))
+	case "STAGING":
+		// Endpoints
+		endpoints.Register(endpoints.NewPDNSEndpoint(logger))
+		// Checkers
+		checkers.Register(checkers.NewAbuseIPDBChecker(logger, db))
+		// Alerters
+		alerters.Register(alerters.NewSlackAlerter(logger))
+	default:
+		// Endpoints
+		endpoints.Register(endpoints.NewPDNSEndpoint(logger))
+		// Checkers
+		checkers.Register(checkers.NewAbuseIPDBChecker(logger, db))
+	}
 
 	go func() {
 		if err := api.Start(); err != nil {
