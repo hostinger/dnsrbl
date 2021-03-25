@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +30,13 @@ func NewMySQLRepository(l *zap.Logger, db *sql.DB) Repository {
 func (s *mysqlRepository) CreateAddress(ctx context.Context, address *Address) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		s.l.Error(
+			"Failed to execute BeginTx",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "GetAddresses"),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed to execute BeginTx")
 	}
 
 	q := `
@@ -49,14 +56,25 @@ func (s *mysqlRepository) CreateAddress(ctx context.Context, address *Address) e
 			)
 	`
 	_, err = tx.ExecContext(ctx, q, address.IP, address.Author, address.Action, address.Comment)
-
 	if err != nil {
+		s.l.Error(
+			"Failed to execute ExecContext",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "CreateAddress"),
+			zap.Error(err),
+		)
 		tx.Rollback() // nolint
-		return err
+		return errors.Wrap(err, "Failed to execute ExecContext")
 	}
 
 	if err := tx.Commit(); err != nil {
-		return err
+		s.l.Error(
+			"Failed to execute Commit",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "CreateAddress"),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed to execute Commit")
 	}
 	return nil
 }
@@ -64,7 +82,13 @@ func (s *mysqlRepository) CreateAddress(ctx context.Context, address *Address) e
 func (s *mysqlRepository) DeleteAddress(ctx context.Context, ip string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		s.l.Error(
+			"Failed to execute BeginTx",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "DeleteAddress"),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed to execute BeginTx")
 	}
 	q := `
 		DELETE FROM
@@ -75,11 +99,23 @@ func (s *mysqlRepository) DeleteAddress(ctx context.Context, ip string) error {
 	`
 	_, err = tx.ExecContext(ctx, q, ip)
 	if err != nil {
+		s.l.Error(
+			"Failed to execute ExecContext",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "DeleteAddress"),
+			zap.Error(err),
+		)
 		tx.Rollback() // nolint
-		return err
+		return errors.Wrap(err, "Failed to execute ExecContext")
 	}
 	if err := tx.Commit(); err != nil {
-		return err
+		s.l.Error(
+			"Failed to execute Commit",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "DeleteAddress"),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed to execute Commit")
 	}
 	return nil
 }
@@ -87,7 +123,13 @@ func (s *mysqlRepository) DeleteAddress(ctx context.Context, ip string) error {
 func (s *mysqlRepository) GetAddress(ctx context.Context, ip string) (*Address, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		s.l.Error(
+			"Failed to execute BeginTx",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "GetAddress"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to execute BeginTx")
 	}
 	q := `
 		SELECT
@@ -109,7 +151,13 @@ func (s *mysqlRepository) GetAddress(ctx context.Context, ip string) (*Address, 
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		s.l.Error(
+			"Failed to execute Commit",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "GetAddresses"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to execute Commit")
 	}
 	return &address, nil
 }
@@ -117,7 +165,13 @@ func (s *mysqlRepository) GetAddress(ctx context.Context, ip string) (*Address, 
 func (s *mysqlRepository) GetAddresses(ctx context.Context) ([]*Address, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		s.l.Error(
+			"Failed to execute BeginTx",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "GetAddresses"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to execute BeginTx")
 	}
 	q := `
 		SELECT
@@ -131,8 +185,14 @@ func (s *mysqlRepository) GetAddresses(ctx context.Context) ([]*Address, error) 
 	`
 	results, err := tx.QueryContext(ctx, q)
 	if err != nil {
+		s.l.Error(
+			"Failed to execute QueryContext",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "GetAddresses"),
+			zap.Error(err),
+		)
 		tx.Rollback() // nolint
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to execute QueryContext")
 	}
 	var addresses []*Address
 	for results.Next() {
@@ -145,7 +205,13 @@ func (s *mysqlRepository) GetAddresses(ctx context.Context) ([]*Address, error) 
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		s.l.Error(
+			"Failed to execute Commit",
+			zap.String("repository", "MySQLRepository"),
+			zap.String("method", "GetAddresses"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to execute Commit")
 	}
 	return addresses, nil
 }
