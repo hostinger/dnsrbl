@@ -3,7 +3,6 @@ package endpoints
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -19,6 +18,7 @@ type cloudflareEndpoint struct {
 }
 
 func NewCloudflareEndpoint(l *zap.Logger) Endpoint {
+	l.Info("Starting execution of NewCloudflareEndpoint", zap.String("endpoint", "Cloudflare"))
 	e := &cloudflareEndpoint{
 		account: os.Getenv("CF_API_ACCOUNT"),
 		email:   os.Getenv("CF_API_EMAIL"),
@@ -27,9 +27,14 @@ func NewCloudflareEndpoint(l *zap.Logger) Endpoint {
 	}
 	api, err := cloudflare.New(e.key, e.email)
 	if err != nil {
-		log.Fatalf("Endpoints: CloudflareEndpoint: %s", err)
+		l.Fatal(
+			"Failed to initialize Cloudflare API client",
+			zap.String("endpoint", "Cloudflare"),
+			zap.Error(err),
+		)
 	}
 	e.client = api
+	l.Info("Finished execution of NewCloudflareEndpoint", zap.String("endpoint", "Cloudflare"))
 	return e
 }
 
@@ -48,6 +53,11 @@ func (c *cloudflareEndpoint) Block(ctx context.Context, ip string) error {
 	}
 	response, err := c.client.CreateAccountAccessRule(ctx, c.account, rule)
 	if err != nil || !response.Success {
+		c.l.Error(
+			"Failed to execute CreateAccountAccessRule",
+			zap.String("endpoint", "Cloudflare"),
+			zap.Error(err),
+		)
 		return err
 	}
 	return nil
@@ -64,6 +74,11 @@ func (c *cloudflareEndpoint) Unblock(ctx context.Context, ip string) error {
 	}
 	rules, err := c.client.ListAccountAccessRules(ctx, c.account, rule, 1)
 	if err != nil {
+		c.l.Error(
+			"Failed to execute ListAccountAccessRules",
+			zap.String("endpoint", "Cloudflare"),
+			zap.Error(err),
+		)
 		return err
 	}
 	if rules.Count <= 0 || rules.Count > 1 {
@@ -71,6 +86,11 @@ func (c *cloudflareEndpoint) Unblock(ctx context.Context, ip string) error {
 	}
 	response, err := c.client.DeleteAccountAccessRule(ctx, c.account, rules.Result[0].ID)
 	if err != nil || !response.Success {
+		c.l.Error(
+			"Failed to execute DeleteAccountAccessRule",
+			zap.String("endpoint", "Cloudflare"),
+			zap.Error(err),
+		)
 		return err
 	}
 	return nil
@@ -87,6 +107,11 @@ func (c *cloudflareEndpoint) Exists(ctx context.Context, ip string) error {
 	}
 	rules, err := c.client.ListAccountAccessRules(ctx, c.account, rule, 1)
 	if err != nil {
+		c.l.Error(
+			"Failed to execute ListAccountAccessRules",
+			zap.String("endpoint", "Cloudflare"),
+			zap.Error(err),
+		)
 		return err
 	}
 	if rules.Count <= 0 || rules.Count > 1 {
