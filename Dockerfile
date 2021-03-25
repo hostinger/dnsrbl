@@ -5,8 +5,15 @@ RUN mkdir /api
 
 COPY . /api
 
+WORKDIR /api
+
+#Generate docs
+RUN go get -u github.com/swaggo/swag/cmd/swag && \
+    swag init -g cmd/hbl/hbl.go
+
 WORKDIR /api/cmd/hbl
 
+#Build api
 RUN go mod download && \
     go build -o hbl .
 
