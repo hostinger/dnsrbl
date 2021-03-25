@@ -15,6 +15,4 @@ FROM gcr.io/distroless/base:nonroot
 
 COPY --from=build-env /api/cmd/hbl/hbl /api/cmd/hbl/hbl
 
-USER nobody
-
 CMD ["/api/cmd/hbl/hbl"]
