@@ -15,8 +15,6 @@ import (
 // @Accept      json
 // @Tags        Addresses
 // @Success     200
-// @Failure     422 {object} Error
-// @Failure     500 {object} Error
 // @Router      /addresses [POST]
 func (api *API) handleAddressesPost(c echo.Context) error {
 	var req BlockRequest
@@ -51,8 +49,6 @@ func (api *API) handleAddressesPost(c echo.Context) error {
 // @Tags        Addresses
 // @Success     200
 // @Param 		ip path string true "IP Address"
-// @Failure     422 {object} Error
-// @Failure     500 {object} Error
 // @Router      /addresses/{ip} [DELETE]
 func (api *API) handleAddressesDelete(c echo.Context) error {
 	ip := c.Param("ip")
@@ -84,8 +80,6 @@ func (api *API) handleAddressesDelete(c echo.Context) error {
 // @Tags        Addresses
 // @Success     200 {object} Address
 // @Param 		ip path string true "IP Address"
-// @Failure     422 {object} Error
-// @Failure     500 {object} Error
 // @Router      /addresses/{ip} [GET]
 func (api *API) handleAddressesGetOne(c echo.Context) error {
 	ip := c.Param("ip")
@@ -108,8 +102,6 @@ func (api *API) handleAddressesGetOne(c echo.Context) error {
 // @Accept      json
 // @Tags        Addresses
 // @Success     200 {array} Address
-// @Failure     422 {object} Error
-// @Failure     500 {object} Error
 // @Router      /addresses [GET]
 func (api *API) handleAddressesGetAll(c echo.Context) error {
 	addresses, err := api.Service.GetAll(context.Background())
@@ -127,8 +119,6 @@ func (api *API) handleAddressesGetAll(c echo.Context) error {
 // @Success     200 {object} Address
 // @Param 		name path string true "Name of the Checker"
 // @Param 		ip path string true "IP Address"
-// @Failure     422 {object} Error
-// @Failure     500 {object} Error
 // @Router      /addresses/check/{name}/{ip} [GET]
 func (api *API) handleAddressesCheck(c echo.Context) error {
 	name, ip := c.Param("name"), c.Param("ip")
