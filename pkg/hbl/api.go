@@ -33,7 +33,6 @@ func NewAPI(cfg *Config) *API {
 	server.HidePort = true
 	server.HideBanner = true
 
-	server.Use(middleware.Logger())
 	server.Use(middleware.Recover())
 
 	server.GET("/swagger/*", echoSwagger.WrapHandler)
