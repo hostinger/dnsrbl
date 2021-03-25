@@ -3,7 +3,6 @@ package alerters
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -19,12 +18,14 @@ type slackAlerter struct {
 }
 
 func NewSlackAlerter(l *zap.Logger) Alerter {
+	l.Info("Starting execution of NewSlackAlerter", zap.String("alerter", "Slack"))
 	c := &slackAlerter{
 		l:        l,
 		url:      os.Getenv("SLACK_WEBHOOK_URL"),
 		channel:  os.Getenv("SLACK_WEBHOOK_CHANNEL"),
 		username: os.Getenv("SLACK_WEBHOOK_USERNAME"),
 	}
+	l.Info("Finished execution of NewSlackAlerter", zap.String("alerter", "Slack"))
 	return c
 }
 
@@ -59,6 +60,10 @@ func (s *slackAlerter) Alert(ctx context.Context, alert *Alert) {
 		},
 	}
 	if err := slack.PostWebhookContext(ctx, s.url, message); err != nil {
-		log.Printf("SlackAlerter: Alert: %s", err)
+		s.l.Error(
+			"Failed to execute PostWebhookContext",
+			zap.String("alerter", "Slack"),
+			zap.Error(err),
+		)
 	}
 }

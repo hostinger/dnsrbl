@@ -29,6 +29,7 @@ type pdnsEndpoint struct {
 }
 
 func NewPDNSEndpoint(l *zap.Logger) Endpoint {
+	l.Info("Starting execution of NewPDNSEndpoint", zap.String("endpoint", "PowerDNS"))
 	c := &pdnsEndpoint{
 		client: &http.Client{
 			Timeout: 5 * time.Second,
@@ -41,32 +42,58 @@ func NewPDNSEndpoint(l *zap.Logger) Endpoint {
 		l:      l,
 	}
 	c.baseURL = fmt.Sprintf("%s://%s:%s/api/v1/servers/localhost", c.scheme, c.host, c.port)
+	l.Info("Finished execution of NewPDNSEndpoint", zap.String("endpoint", "PowerDNS"))
 	return c
 }
 
 func (c *pdnsEndpoint) Call(ctx context.Context, uri, method string, code int, data interface{}) ([]byte, error) {
 	body, err := json.Marshal(data)
 	if err != nil {
+		c.l.Error(
+			"Failed to marshal body into JSON",
+			zap.String("endpoint", "PowerDNS"),
+			zap.Error(err),
+		)
 		return nil, errors.Wrap(err, "Failed to marshal body into JSON")
 	}
 	req, err := http.NewRequestWithContext(ctx, method, uri, bytes.NewBuffer(body))
 	if err != nil {
+		c.l.Error(
+			"Failed to create new request object",
+			zap.String("endpoint", "PowerDNS"),
+			zap.Error(err),
+		)
 		return nil, errors.Wrap(err, "Failed creating new request object")
 	}
 	req.Header.Set("X-API-Key", c.key)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		c.l.Error(
+			"Failed to execute request",
+			zap.String("endpoint", "PowerDNS"),
+			zap.Error(err),
+		)
 		return nil, errors.Wrap(err, "Failed executing request")
 	}
 	defer resp.Body.Close()
 
 	body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
+		c.l.Error(
+			"Failed to read response body",
+			zap.String("endpoint", "PowerDNS"),
+			zap.Error(err),
+		)
 		return nil, errors.Wrap(err, "Failed to read response body")
 	}
 
 	if resp.StatusCode != code {
+		c.l.Error(
+			"Uknown response from PowerDNS API",
+			zap.String("endpoint", "PowerDNS"),
+			zap.String("error", string(body)),
+		)
 		return nil, errors.Errorf("Unknown response from API: %s", string(body))
 	}
 
@@ -87,9 +114,6 @@ func (c *pdnsEndpoint) PatchZone(ctx context.Context, ip, action string) error {
 	}
 	type Zone struct {
 		RRSets []RRSet `json:"rrsets"`
-	}
-	if net.ParseIP(ip) == nil {
-		return errors.New("argument 'ip' must be a valid IP address")
 	}
 	reverseIP := utils.ReverseAddress(strings.Split(ip, "."))
 	data := Zone{

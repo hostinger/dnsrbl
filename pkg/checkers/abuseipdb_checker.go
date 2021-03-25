@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -34,6 +34,7 @@ type abuseipdbChecker struct {
 }
 
 func NewAbuseIPDBChecker(l *zap.Logger, db *sql.DB) Checker {
+	l.Info("Starting execution of NewAbuseIPDBChecker", zap.String("checker", "AbuseIPDB"))
 	c := &abuseipdbChecker{
 		client: &http.Client{
 			Timeout: 5 * time.Second,
@@ -43,6 +44,7 @@ func NewAbuseIPDBChecker(l *zap.Logger, db *sql.DB) Checker {
 		DB:      db,
 		l:       l,
 	}
+	l.Info("Finished execution of NewAbuseIPDBChecker", zap.String("checker", "AbuseIPDB"))
 	return c
 }
 
@@ -68,15 +70,15 @@ func (c *abuseipdbChecker) Call(ctx context.Context, ip string) (*AbuseIPDBRepor
 			IsPublic             bool          `json:"isPublic"`
 		} `json:"data"`
 	}
-
-	if net.ParseIP(ip) == nil {
-		return nil, fmt.Errorf("argument must be a valid IP address")
-	}
-
 	uri := fmt.Sprintf("%s/check", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	if err != nil {
-		return nil, err
+		c.l.Error(
+			"Failed to create new request object",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed creating new request object")
 	}
 	q := req.URL.Query()
 	q.Set("ipAddress", ip)
@@ -88,17 +90,32 @@ func (c *abuseipdbChecker) Call(ctx context.Context, ip string) (*AbuseIPDBRepor
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		c.l.Error(
+			"Failed to execute request",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed executing request")
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failure from AbuseIPDB API: %s", string(body))
+		c.l.Error(
+			"Failed to read response body",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to read response body")
 	}
 
 	var result Result
 	if err := json.Unmarshal(body, &result); err != nil {
+		c.l.Error(
+			"Failed to unmarshal JSON",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
@@ -122,6 +139,11 @@ func (c *abuseipdbChecker) Check(ctx context.Context, ip string) (interface{}, e
 			return nil, err
 		}
 		if err := c.SaveReport(ctx, report); err != nil {
+			c.l.Error(
+				"Failed to execute SaveReport",
+				zap.String("checker", "AbuseIPDB"),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 	}
@@ -131,7 +153,12 @@ func (c *abuseipdbChecker) Check(ctx context.Context, ip string) (interface{}, e
 func (c *abuseipdbChecker) SaveReport(ctx context.Context, report *AbuseIPDBReport) error {
 	tx, err := c.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		c.l.Error(
+			"Failed to execute BeginTx",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed to execute BeginTx")
 	}
 
 	q := `
@@ -166,12 +193,22 @@ func (c *abuseipdbChecker) SaveReport(ctx context.Context, report *AbuseIPDBRepo
 		report.LastReportedAt,
 	)
 	if err != nil {
+		c.l.Error(
+			"Failed to execute ExecContext",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
 		tx.Rollback() // nolint
-		return err
+		return errors.Wrap(err, "Failed to execute ExecContext")
 	}
 
 	if err := tx.Commit(); err != nil {
-		return err
+		c.l.Error(
+			"Failed to execute Commit",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed to execute Commit")
 	}
 
 	return nil
@@ -181,7 +218,12 @@ func (c *abuseipdbChecker) GetReport(ctx context.Context, ip string) (*AbuseIPDB
 	var report AbuseIPDBReport
 	tx, err := c.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		c.l.Error(
+			"Failed to execute BeginTx",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to execute BeginTx")
 	}
 	q := `
 		SELECT
@@ -208,7 +250,12 @@ func (c *abuseipdbChecker) GetReport(ctx context.Context, ip string) (*AbuseIPDB
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		c.l.Error(
+			"Failed to execute Commit",
+			zap.String("checker", "AbuseIPDB"),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed to execute Commit")
 	}
 	return &report, nil
 }
