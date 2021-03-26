@@ -18,7 +18,7 @@ pipeline {
   stages {
     stage('Tests') {
       steps {
-        sh "cd ${workspace}:/pkg/hbl && go test -v "
+        sh "cd ${workspace}/pkg/hbl && go test -v "
       }
     }
     stage('Lint') {
