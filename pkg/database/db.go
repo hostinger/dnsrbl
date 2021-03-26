@@ -1,24 +1,23 @@
-package hbl
+package database
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL Drivers
-	"github.com/pkg/errors"
 )
 
-func InitDB(ctx context.Context) (*sql.DB, error) {
+func Init(ctx context.Context, username, password, host, port, db string) (*sql.DB, error) {
 	uri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-		os.Getenv("HBL_MYSQL_USERNAME"),
-		os.Getenv("HBL_MYSQL_PASSWORD"),
-		os.Getenv("HBL_MYSQL_HOST"),
-		os.Getenv("HBL_MYSQL_PORT"),
-		os.Getenv("HBL_MYSQL_DATABASE"),
+		username,
+		password,
+		host,
+		port,
+		db,
 	)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()

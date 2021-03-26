@@ -12,13 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hostinger/hbl/pkg/logger"
 	"github.com/hostinger/hbl/pkg/utils"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 type pdnsEndpoint struct {
-	l       *zap.Logger
+	l       logger.Logger
 	client  *http.Client
 	baseURL string
 	scheme  string
@@ -28,7 +29,7 @@ type pdnsEndpoint struct {
 	key     string
 }
 
-func NewPDNSEndpoint(l *zap.Logger) Endpoint {
+func NewPDNSEndpoint(l logger.Logger) Endpoint {
 	l.Info("Starting execution of NewPDNSEndpoint", zap.String("endpoint", "PowerDNS"))
 	c := &pdnsEndpoint{
 		client: &http.Client{

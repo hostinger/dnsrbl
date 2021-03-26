@@ -15,18 +15,18 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "GET",
 			Path:   "/version",
-			Func:   api.handleVersion,
+			Func:   api.Handler.HandleVersion,
 		},
 		{
 			Method: "GET",
 			Path:   "/health",
-			Func:   api.handleHealth,
+			Func:   api.Handler.HandleHealth,
 		},
 		// Addresses
 		{
 			Method: "GET",
 			Path:   "/api/v1/addresses",
-			Func:   api.handleAddressesGetAll,
+			Func:   api.Handler.HandleAddressesGetAll,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
@@ -34,7 +34,7 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "POST",
 			Path:   "/api/v1/addresses",
-			Func:   api.handleAddressesPost,
+			Func:   api.Handler.HandleAddressesPost,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
@@ -42,7 +42,7 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "GET",
 			Path:   "/api/v1/addresses/:ip",
-			Func:   api.handleAddressesGetOne,
+			Func:   api.Handler.HandleAddressesGetOne,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
@@ -50,7 +50,7 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "DELETE",
 			Path:   "/api/v1/addresses/:ip",
-			Func:   api.handleAddressesDelete,
+			Func:   api.Handler.HandleAddressesDelete,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
@@ -58,7 +58,7 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "GET",
 			Path:   "/api/v1/addresses/check/:name/:ip",
-			Func:   api.handleAddressesCheck,
+			Func:   api.Handler.HandleAddressesCheck,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
@@ -66,7 +66,7 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "POST",
 			Path:   "/api/v1/addresses/sync",
-			Func:   api.handleAddressesSyncAll,
+			Func:   api.Handler.HandleAddressesSyncAll,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
@@ -74,7 +74,7 @@ func (api *API) GetRoutes() []*Route {
 		{
 			Method: "POST",
 			Path:   "/api/v1/addresses/sync/:ip",
-			Func:   api.handleAddressesSyncOne,
+			Func:   api.Handler.HandleAddressesSyncOne,
 			Middleware: []echo.MiddlewareFunc{
 				KeyAuthMiddleware,
 			},
