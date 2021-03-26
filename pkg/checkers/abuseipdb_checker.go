@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/hostinger/hbl/pkg/logger"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -26,14 +27,14 @@ type AbuseIPDBReport struct {
 }
 
 type abuseipdbChecker struct {
-	l       *zap.Logger
+	l       logger.Logger
 	DB      *sql.DB
 	client  *http.Client
 	baseURL string
 	key     string
 }
 
-func NewAbuseIPDBChecker(l *zap.Logger, db *sql.DB) Checker {
+func NewAbuseIPDBChecker(l logger.Logger, db *sql.DB) Checker {
 	l.Info("Starting execution of NewAbuseIPDBChecker", zap.String("checker", "AbuseIPDB"))
 	c := &abuseipdbChecker{
 		client: &http.Client{

@@ -6,18 +6,19 @@ import (
 	"os"
 
 	"github.com/cloudflare/cloudflare-go"
+	"github.com/hostinger/hbl/pkg/logger"
 	"go.uber.org/zap"
 )
 
 type cloudflareEndpoint struct {
-	l       *zap.Logger
+	l       logger.Logger
 	client  *cloudflare.API
 	account string
 	email   string
 	key     string
 }
 
-func NewCloudflareEndpoint(l *zap.Logger) Endpoint {
+func NewCloudflareEndpoint(l logger.Logger) Endpoint {
 	l.Info("Starting execution of NewCloudflareEndpoint", zap.String("endpoint", "Cloudflare"))
 	e := &cloudflareEndpoint{
 		account: os.Getenv("CF_API_ACCOUNT"),

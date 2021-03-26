@@ -10,7 +10,10 @@ run:
   issues-exit-code: 1
 
   # include test files or not, default is true
-  tests: true
+  tests: false
+
+  build-tags:
+    - codeanalysis
 
 # output configuration options
 output:

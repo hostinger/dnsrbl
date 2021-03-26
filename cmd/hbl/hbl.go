@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,8 +9,10 @@ import (
 
 	"github.com/hostinger/hbl/pkg/alerters"
 	"github.com/hostinger/hbl/pkg/checkers"
+	"github.com/hostinger/hbl/pkg/database"
 	"github.com/hostinger/hbl/pkg/endpoints"
 	"github.com/hostinger/hbl/pkg/hbl"
+	"github.com/hostinger/hbl/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -21,55 +22,67 @@ import (
 // @host localhost:8080
 // @BasePath /api/v1
 func main() {
+	l := logger.NewLoggerFromEnv()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	db, err := hbl.InitDB(ctx)
+	db, err := database.Init(ctx,
+		os.Getenv("HBL_MYSQL_USERNAME"),
+		os.Getenv("HBL_MYSQL_PASSWORD"),
+		os.Getenv("HBL_MYSQL_HOST"),
+		os.Getenv("HBL_MYSQL_PORT"),
+		os.Getenv("HBL_MYSQL_DATABASE"),
+	)
 	if err != nil {
-		log.Printf("Database: %s", err)
+		l.Fatal(
+			"Failed to initialize database",
+			zap.String("host", os.Getenv("HBL_MYSQL_HOST")),
+			zap.String("port", os.Getenv("HBL_MYSQL_PORT")),
+			zap.Error(err),
+		)
 	}
 
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Printf("Logger: %s", err)
-	}
+	r := hbl.NewMySQLRepository(l, db)
+	s := hbl.NewDefaultService(l, r)
+	h := hbl.NewDefaultHandler(l, s)
 
 	api := hbl.NewAPI(
 		&hbl.Config{
-			DB:     db,
-			Host:   os.Getenv("HBL_LISTEN_ADDRESS"),
-			Port:   os.Getenv("HBL_LISTEN_PORT"),
-			Logger: logger,
+			Handler: h,
+			Logger:  l,
+			Host:    os.Getenv("HBL_LISTEN_ADDRESS"),
+			Port:    os.Getenv("HBL_LISTEN_PORT"),
 		},
 	)
+
+	api.Initialize(ctx)
 
 	switch os.Getenv("ENVIRONMENT") {
 	case "PRODUCTION":
 		// Endpoints
-		endpoints.Register(endpoints.NewCloudflareEndpoint(logger))
-		endpoints.Register(endpoints.NewPDNSEndpoint(logger))
+		endpoints.Register(endpoints.NewCloudflareEndpoint(l))
+		endpoints.Register(endpoints.NewPDNSEndpoint(l))
 		// Checkers
-		checkers.Register(checkers.NewAbuseIPDBChecker(logger, db))
+		checkers.Register(checkers.NewAbuseIPDBChecker(l, db))
 		// Alerters
-		alerters.Register(alerters.NewSlackAlerter(logger))
+		alerters.Register(alerters.NewSlackAlerter(l))
 	case "STAGING":
 		// Endpoints
-		endpoints.Register(endpoints.NewPDNSEndpoint(logger))
+		endpoints.Register(endpoints.NewPDNSEndpoint(l))
 		// Checkers
-		checkers.Register(checkers.NewAbuseIPDBChecker(logger, db))
+		checkers.Register(checkers.NewAbuseIPDBChecker(l, db))
 		// Alerters
-		alerters.Register(alerters.NewSlackAlerter(logger))
+		alerters.Register(alerters.NewSlackAlerter(l))
 	default:
 		// Endpoints
-		endpoints.Register(endpoints.NewPDNSEndpoint(logger))
+		endpoints.Register(endpoints.NewPDNSEndpoint(l))
 		// Checkers
-		checkers.Register(checkers.NewAbuseIPDBChecker(logger, db))
+		checkers.Register(checkers.NewAbuseIPDBChecker(l, db))
 	}
 
 	go func() {
-		if err := api.Start(); err != nil {
-			log.Fatalf("Failure: %s", err)
-		}
+		api.Start()
 	}()
 
 	signals := make(chan os.Signal, 1)

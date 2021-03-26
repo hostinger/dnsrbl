@@ -6,18 +6,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hostinger/hbl/pkg/logger"
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
 )
 
 type slackAlerter struct {
-	l        *zap.Logger
+	l        logger.Logger
 	url      string
 	username string
 	channel  string
 }
 
-func NewSlackAlerter(l *zap.Logger) Alerter {
+func NewSlackAlerter(l logger.Logger) Alerter {
 	l.Info("Starting execution of NewSlackAlerter", zap.String("alerter", "Slack"))
 	c := &slackAlerter{
 		l:        l,
