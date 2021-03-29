@@ -2,13 +2,12 @@ package hbl
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	_ "github.com/hostinger/hbl/docs" // Needed for Swagger
+	"github.com/hostinger/hbl/pkg/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -16,16 +15,16 @@ import (
 )
 
 type Config struct {
-	DB     *sql.DB
-	Logger *zap.Logger
-	Host   string
-	Port   string
+	Handler Handler
+	Logger  logger.Logger
+	Host    string
+	Port    string
 }
 
 type API struct {
+	Handler Handler
 	Cfg     *Config
 	Server  *echo.Echo
-	Service Service
 }
 
 func NewAPI(cfg *Config) *API {
@@ -33,28 +32,32 @@ func NewAPI(cfg *Config) *API {
 	server.HidePort = true
 	server.HideBanner = true
 
-	server.Use(middleware.Logger())
 	server.Use(middleware.Recover())
 
 	server.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	service := NewService(cfg.Logger, NewMySQLRepository(cfg.Logger, cfg.DB))
-
 	return &API{
 		Cfg:     cfg,
+		Handler: cfg.Handler,
 		Server:  server,
-		Service: service,
 	}
 }
 
-func (api *API) Start() error {
-	api.Cfg.Logger.Info("Starting", zap.String("host", api.Cfg.Host), zap.String("port", api.Cfg.Port))
+func (api *API) Initialize(ctx context.Context) {
 	api.SetupRoutes()
+}
+
+func (api *API) Start() {
+	api.Cfg.Logger.Info("Starting", zap.String("host", api.Cfg.Host), zap.String("port", api.Cfg.Port))
 	uri := fmt.Sprintf("%s:%s", api.Cfg.Host, api.Cfg.Port)
 	if err := api.Server.Start(uri); err != nil && err != http.ErrServerClosed {
-		api.Cfg.Logger.Fatal(err.Error())
+		api.Cfg.Logger.Fatal(
+			"Failed to start, exiting with errors",
+			zap.String("host", api.Cfg.Host),
+			zap.String("port", api.Cfg.Port),
+			zap.Error(err),
+		)
 	}
-	return nil
 }
 
 func (api *API) Stop() {
@@ -64,6 +67,11 @@ func (api *API) Stop() {
 		cancel()
 	}()
 	if err := api.Server.Shutdown(ctx); err != nil {
-		log.Printf("Failed clean shutdown, exiting with errors.")
+		api.Cfg.Logger.Fatal(
+			"Failed to stop, exiting with errors",
+			zap.String("host", api.Cfg.Host),
+			zap.String("port", api.Cfg.Port),
+			zap.Error(err),
+		)
 	}
 }
