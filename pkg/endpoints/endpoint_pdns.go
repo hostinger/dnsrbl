@@ -33,7 +33,7 @@ func NewPDNSEndpoint(l logger.Logger) Endpoint {
 	l.Info("Starting execution of NewPDNSEndpoint", zap.String("endpoint", "PowerDNS"))
 	c := &pdnsEndpoint{
 		client: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: 10 * time.Second,
 		},
 		scheme: os.Getenv("PDNS_API_SCHEME"),
 		zone:   os.Getenv("PDNS_API_ZONE"),
