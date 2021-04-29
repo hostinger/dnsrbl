@@ -12,7 +12,7 @@ pipeline {
 
   environment {
     REPO = 'hostinger-hbl'
-    TAG = sh(script: "git log --pretty=format:'%h' -n 1", returnStdout: true).trim()
+    TAG  = sh(script: "git log --pretty=format:'%h' -n 1", returnStdout: true).trim()
   }
 
   stages {
